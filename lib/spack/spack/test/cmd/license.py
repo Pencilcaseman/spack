@@ -91,6 +91,20 @@ parameters = [
         GOOD_HEADER,
         False,
     ),
+    (
+        "old_llnl.lp",
+        r"files not containing expected license:\s*1",
+        textwrap.dedent(
+            """\
+            % Copyright 2013-2024 Lawrence Livermore National Security, LLC and other
+            % Spack Project Developers. See top-level COPYRIGHT file for details.
+            %
+            % SPDX-License-Identifier: (Apache-2.0 OR MIT)
+            """
+        ),
+        GOOD_HEADER.replace("#", "%"),
+        False,
+    ),
     ("no_header.py", r"files without license in first 7 lines:\s*1", "", GOOD_HEADER, False),
     (
         "test-script",
@@ -141,6 +155,7 @@ parameters = [
         False,
     ),
     ("good.py", "", GOOD_HEADER, GOOD_HEADER, True),
+    ("good.lp", "", GOOD_HEADER.replace("#", "%"), GOOD_HEADER.replace("#", "%"), True),
 ]
 
 
@@ -185,6 +200,7 @@ class TestLicenses:
             return
 
         if fixed_header:
+            print("OUT", out)
             assert f"Fixed {str(source_file)}" in out
             assert license.returncode == 0
 

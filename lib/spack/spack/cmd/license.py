@@ -211,50 +211,63 @@ def _fix_path(path: str) -> List[str]:
     Returns:
         List of fixed lines, if a fix was possible, otherwise an empty list.
     """
-    lines = open(path, encoding="utf-8").read().split("\n")
+    comment, fixed = "#", fixed_lines
+    if path.endswith(".lp"):
+        fixed = [line.replace(comment, "%") for line in fixed_lines]
+        comment = "%"
 
-    # only try to fix python files / scripts
-    if not (path.endswith(".py") or path.endswith(".sh") or (lines and lines[0].startswith("#!"))):
+    try:
+        if path.endswith(".py") or path.endswith(".sh"):
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().split("\n")
+        else:
+            with open(path, encoding="utf-8") as f:
+                if f.read(2) != "#!":
+                    return []
+                f.seek(0)
+                lines = f.read().split("\n")
+    except UnicodeDecodeError:
         return []
 
     # easy case: license looks mostly familiar
-    start = next((i for i, line in enumerate(lines) if re.match(r"#\s*Copyright", line)), -1)
-    end = next((i for i, line in enumerate(lines) if re.match(r"#\s*SPDX-", line)), -1)
-
+    start = next(
+        (i for i, line in enumerate(lines) if re.match(rf"{comment}\s*Copyright", line)), -1
+    )
+    end = next((i for i, line in enumerate(lines) if re.match(rf"{comment}\s*SPDX-", line)), -1)
     # here we just replace a bad license with the fixed one
     if start >= 0 and end >= 0:
         # filter out weird cases and make sure we mostly know what we're fixing
         if (
             end < start
             or end - start > 6
-            or not all(lines[i].startswith("#") for i in range(start, end))
+            or not all(lines[i].startswith(comment) for i in range(start, end))
         ):
             return []
 
         if start < (license_lines - len(license_line_regexes)):
             # replace license where it is
-            lines[start : end + 1] = fixed_lines
+            lines[start : end + 1] = fixed
         else:
             # move license to beginning of file
             del lines[start : end + 1]
 
             start = 0
-            while any(lines[start].startswith(s) for s in ("#!", "# -*-")):
+            while any(lines[start].startswith(s) for s in ("#!", f"{comment} -*-")):
                 start += 1
 
-            lines[start:start] = fixed_lines
+            lines[start:start] = fixed
 
         return lines
 
     # no license in the file yet, so we add it
     if start == -1 and end == -1:
         start = 0
-        while any(lines[start].startswith(s) for s in ("#!", "# -*-")):
+        while any(lines[start].startswith(s) for s in ("#!", f"{comment} -*-")):
             start += 1
 
             # add an empty line if needed
-            if not re.match(r"#\s*$", lines[start]):
-                lines[start:start] = "#"
+            if not re.match(rf"{comment}\s*$", lines[start]):
+                lines[start:start] = comment
                 start += 1
 
         lines[start:start] = fixed_lines
