@@ -3305,3 +3305,31 @@ def test_concretization_cache_roundtrip(use_concretization_cache, monkeypatch, m
     # object
     for _ in range(5):
         assert h == spack.concretize.concretize_one("hdf5")
+
+
+@pytest.mark.usefixtures("mutable_config", "mock_packages", "do_not_check_runtimes_on_reuse")
+@pytest.mark.parametrize(
+    "spec_str, should_pass, error_type",
+    [
+        (f"git-ref-package@main commit={'a' *40}", True, None),
+        (f"git-ref-package@main commit={'a' *39}", False, AssertionError),
+        # TODO only versions with git refs should allow the commit variant
+    ],
+)
+def test_spec_containing_commit_variant(spec_str, should_pass, error_type):
+    spec = spack.spec.Spec(spec_str)
+    if should_pass:
+        spec.concretize()
+    else:
+        with pytest.raises(error_type):
+            spec.concretize()
+
+
+@pytest.mark.usefixtures("mutable_config", "mock_packages", "do_not_check_runtimes_on_reuse")
+@pytest.mark.parametrize("version_str", [f"git.{'a' *40}=main", "git.2.1.5=main"])
+def test_relationship_git_versions_and_commit_variant(version_str):
+    spec = spack.spec.Spec(f"git-ref-package@{version_str}").concretized()
+    if spec.version.commit_sha:
+        assert spec.version.commit_sha == spec.variants["commit"].value
+    else:
+        assert "commit" not in spec.variants
