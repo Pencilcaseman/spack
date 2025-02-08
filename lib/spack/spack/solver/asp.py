@@ -3173,6 +3173,7 @@ class SpackSolverSetup:
 
         self.gen.h1("Special variants")
         self.define_auto_variant("dev_path", multi=False)
+        self.define_auto_variant("commit", multi=False)
         self.define_auto_variant("patches", multi=True)
 
         self.gen.h1("Develop specs")
@@ -4140,6 +4141,10 @@ class SpecBuilder:
                         spack.version.git_ref_lookup.GitRefLookup(spec.fullname)
                     )
 
+        # check for commits mush happen after all version adaptations are complete
+        for s in self._specs.values():
+            _specs_with_commits(s)
+
         specs = self.execute_explicit_splices()
         return specs
 
@@ -4264,6 +4269,37 @@ def _ensure_external_path_if_external(spec: spack.spec.Spec) -> None:
     spec.external_path = getattr(package, "external_prefix", None) or md.path_from_modules(
         spec.external_modules
     )
+
+
+def _specs_with_commits(spec):
+    has_commit_var = "commit" in spec.variants
+    has_git_version = isinstance(spec.version, vn.GitVersion)
+
+    if not (has_commit_var or has_git_version):
+        return
+
+    # Specs with commit variants
+    # - variant value satsifies commit regex
+    # - paired to a GitVersion or can create GitVersion from version that was selected
+    # - variant value should match GitVersion's commit value
+    if has_commit_var:
+        invalid_commit_msg = (
+            f"Internal Error: {spec.name}'s assigned commit {spec.variants['commit'].value}"
+            " does not meet commit syntax requirements."
+        )
+
+        # TODO probably want a more specific function just for sha validation
+        assert vn.is_git_version(spec.variants["commit"].value), invalid_commit_msg
+
+    # Specs with GitVersions
+    # - must have a commit variant, or add it here
+    # - must have a commit on the GitVersion (enforce after look up implemented)
+    if has_git_version:
+        if not spec.version.commit_sha:
+            # TODO(psakiev) this will be a failure when commit look up is automated
+            return
+
+        spec.variants["commit"] = vt.SingleValuedVariant("commit", spec.version.commit_sha)
 
 
 def _develop_specs_from_env(spec, env):
