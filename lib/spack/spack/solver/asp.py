@@ -3058,7 +3058,7 @@ class SpackSolverSetup:
 
         candidate_compilers.update(compilers_from_reuse)
         self.possible_compilers = list(candidate_compilers)
-        self.possible_compilers.sort()
+        self.possible_compilers.sort()  # type: ignore[call-overload]
 
         self.gen.h1("Reusable concrete specs")
         self.define_concrete_input_specs(specs, self.pkgs)
