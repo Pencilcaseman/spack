@@ -4185,6 +4185,42 @@ class SpecBuilder:
         return specs
 
 
+def _specs_with_commits(spec):
+    # StandardVersions paired to git branches or tags and GitVersions
+    if not spec.version.needs_commit:
+        return
+    spec.package.resolve_binary_provenance()
+
+    # method above is in charge of assigning the commit variant
+    has_commit_var = "commit" in spec.variants
+    has_git_version = isinstance(spec.version, vn.GitVersion)
+
+    if not (has_commit_var or has_git_version):
+        return
+
+    # Specs with commit variants
+    # - variant value satsifies commit regex
+    # - paired to a GitVersion or version that is associated with a branch/tag
+    # - variant value should match GitVersion's commit value
+    if has_commit_var:
+        invalid_commit_msg = (
+            f"Internal Error: {spec.name}'s assigned commit {spec.variants['commit'].value}"
+            " does not meet commit syntax requirements."
+        )
+
+        # TODO probably want a more specific function just for sha validation
+        assert vn.is_git_version(spec.variants["commit"].value), invalid_commit_msg
+
+    # Specs with GitVersions
+    # - must have a commit variant, or add it here
+    # - must have a commit on the GitVersion (enforce after look up implemented)
+    if has_git_version:
+        if not spec.version.commit_sha:
+            # TODO(psakiev) this will be a failure when commit look up is automated
+            return
+        spec.variants["commit"] = vt.SingleValuedVariant("commit", spec.version.commit_sha)
+
+
 def _inject_patches_variant(root: spack.spec.Spec) -> None:
     # This dictionary will store object IDs rather than Specs as keys
     # since the Spec __hash__ will change as patches are added to them

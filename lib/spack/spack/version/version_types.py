@@ -391,6 +391,9 @@ class StandardVersion(ConcreteVersion):
             isinstance(p, VersionStrComponent) and isinstance(p.data, int) for p in self.version[0]
         )
 
+    def needs_commit(self) -> bool:
+        return bool(self.get("branch") or self.get("tag"))
+
     def is_prerelease(self) -> bool:
         return self.version[1][0] != FINAL
 
@@ -715,6 +718,9 @@ class GitVersion(ConcreteVersion):
 
     def __contains__(self, other: object) -> bool:
         raise NotImplementedError
+
+    def needs_commit(self) -> bool:
+        return True
 
     @property
     def ref_lookup(self):

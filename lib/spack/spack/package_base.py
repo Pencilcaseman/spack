@@ -989,6 +989,15 @@ class PackageBase(WindowsRPath, PackageViewMixin, metaclass=PackageMeta):
         assert dev_path_var and record, "dev_path variant and record must be present"
         return fsys.recursive_mtime_greater_than(dev_path_var.value, record.installation_time)
 
+    def resolve_binary_provenance(self):
+        """
+        Method to ensure concrete spec has binary provenance.
+        Base implementation will look up git commits when appropriate.
+        Packages may override this implementation for custom implementations
+        """
+        # TODO in follow on PR adding here so SNL team can begin work ahead of spack core
+        pass
+
     def all_urls_for_version(self, version: StandardVersion) -> List[str]:
         """Return all URLs derived from version_urls(), url, urls, and
         list_url (if it contains a version) in a package in that order.
