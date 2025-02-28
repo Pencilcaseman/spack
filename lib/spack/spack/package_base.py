@@ -989,7 +989,21 @@ class PackageBase(WindowsRPath, PackageViewMixin, metaclass=PackageMeta):
         assert dev_path_var and record, "dev_path variant and record must be present"
         return fsys.recursive_mtime_greater_than(dev_path_var.value, record.installation_time)
 
-    def resolve_binary_provenance(self):
+    @property
+    def needs_commit(self) -> bool:
+        """
+        Method for checking if the package instance needs a commit sha to be found
+        """
+        if isinstance(self.version, GitVersion):
+            return True
+
+        ver_attrs = self.versions.get(self.version)
+        if ver_attrs:
+            return bool(ver_attrs.get("tag") or ver_attrs.get("branch"))
+
+        return False
+
+    def resolve_binary_provenance(self) -> None:
         """
         Method to ensure concrete spec has binary provenance.
         Base implementation will look up git commits when appropriate.

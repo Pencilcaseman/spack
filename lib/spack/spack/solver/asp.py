@@ -4186,9 +4186,6 @@ class SpecBuilder:
 
 
 def _specs_with_commits(spec):
-    # StandardVersions paired to git branches or tags and GitVersions
-    if not spec.version.needs_commit:
-        return
     spec.package.resolve_binary_provenance()
 
     # method above is in charge of assigning the commit variant
@@ -4197,6 +4194,8 @@ def _specs_with_commits(spec):
 
     if not (has_commit_var or has_git_version):
         return
+    # StandardVersions paired to git branches or tags and GitVersions
+    assert spec.package.needs_commit, f"{spec.name}@{spec.version} can not have a commit variant"
 
     # Specs with commit variants
     # - variant value satsifies commit regex
