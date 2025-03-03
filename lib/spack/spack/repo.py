@@ -96,7 +96,7 @@ class ReposFinder:
 
     def __init__(self):
         self._repo_init = _path
-        self._repo = None
+        self._repo: Optional[RepoType] = None
 
     @property
     def current_repository(self):
@@ -137,11 +137,12 @@ class ReposFinder:
         namespace, dot, module_name = fullname.rpartition(".")
 
         # If it's a module in some repo, or if it is the repo's namespace, let the repo handle it.
-        is_repo_path = isinstance(self.current_repository, RepoPath)
+        current_repo = self.current_repository
+        is_repo_path = isinstance(current_repo, RepoPath)
         if is_repo_path:
-            repos = self.current_repository.repos
+            repos = current_repo.repos
         else:
-            repos = [self.current_repository]
+            repos = [current_repo]
 
         for repo in repos:
             # We are using the namespace of the repo and the repo contains the package
@@ -158,7 +159,7 @@ class ReposFinder:
 
         # No repo provides the namespace, but it is a valid prefix of
         # something in the RepoPath.
-        if is_repo_path and self.current_repository.by_namespace.is_prefix(fullname):
+        if is_repo_path and current_repo.by_namespace.is_prefix(fullname):
             return SpackNamespaceLoader()
 
         return None
@@ -349,9 +350,10 @@ class FastPackageChecker(collections.abc.Mapping):
     #: Global cache, reused by every instance
     _paths_cache: Dict[str, Dict[str, os.stat_result]] = {}
 
-    def __init__(self, packages_path):
+    def __init__(self, packages_path: str, repo_version: int):
         # The path of the repository managed by this instance
         self.packages_path = packages_path
+        self.repo_version = repo_version
 
         # If the cache we need is not there yet, then build it appropriately
         if packages_path not in self._paths_cache:
@@ -368,29 +370,26 @@ class FastPackageChecker(collections.abc.Mapping):
     def _create_new_cache(self) -> Dict[str, os.stat_result]:
         """Create a new cache for packages in a repo.
 
-        The implementation here should try to minimize filesystem
-        calls.  At the moment, it is O(number of packages) and makes
-        about one stat call per package.  This is reasonably fast, and
-        avoids actually importing packages in Spack, which is slow.
+        The implementation here should try to minimize filesystem calls.  At the moment, it is
+        O(number of packages) and makes one stat call per package without importing as a module.
         """
-        # Create a dictionary that will store the mapping between a
-        # package name and its stat info
+        # Mapping from package name to package.py stat result
         cache: Dict[str, os.stat_result] = {}
-        for pkg_name in os.listdir(self.packages_path):
+        for file_name in os.listdir(self.packages_path):
             # Skip non-directories in the package root.
-            pkg_dir = os.path.join(self.packages_path, pkg_name)
+            pkg_dir = os.path.join(self.packages_path, file_name)
 
             # Warn about invalid names that look like packages.
-            if not nm.valid_module_name(pkg_name):
-                if not pkg_name.startswith(".") and pkg_name != "repo.yaml":
+            if not nm.valid_module_name(file_name, self.repo_version):
+                if not file_name.startswith(".") and file_name != "repo.yaml":
                     tty.warn(
-                        'Skipping package at {0}. "{1}" is not '
-                        "a valid Spack module name.".format(pkg_dir, pkg_name)
+                        f'Skipping package at {pkg_dir}. "{file_name}" is not a valid Spack '
+                        f"module name for repo version {self.repo_version}."
                     )
                 continue
 
             # Construct the file name from the directory
-            pkg_file = os.path.join(self.packages_path, pkg_name, package_file_name)
+            pkg_file = os.path.join(self.packages_path, file_name, package_file_name)
 
             # Use stat here to avoid lots of calls to the filesystem.
             try:
@@ -400,17 +399,16 @@ class FastPackageChecker(collections.abc.Mapping):
                     # No package.py file here.
                     continue
                 elif e.errno == errno.EACCES:
-                    tty.warn("Can't read package file %s." % pkg_file)
+                    tty.warn(f"Can't read package file {pkg_file}.")
                     continue
                 raise e
 
             # If it's not a file, skip it.
-            if stat.S_ISDIR(sinfo.st_mode):
+            if not stat.S_ISREG(sinfo.st_mode):
                 continue
 
-            # If it is a file, then save the stats under the
-            # appropriate key
-            cache[pkg_name] = sinfo
+            # Store the stat info by package name.
+            cache[nm.mod_to_pkg_name(file_name, self.repo_version)] = sinfo
 
         return cache
 
@@ -912,16 +910,19 @@ class RepoPath:
 class Repo:
     """Class representing a package repository in the filesystem.
 
-    Each package repository must have a top-level configuration file
-    called `repo.yaml`.
+    Each package repository must have a top-level configuration file called `repo.yaml`.
 
-    Currently, `repo.yaml` must define:
+    It contains the following keys:
 
     `namespace`:
         A Python namespace where the repository's packages should live.
 
     `subdirectory`:
         An optional subdirectory name where packages are placed
+
+    `version`:
+        Either 1 or 2. Version 2 requires that package directories are valid Python module names,
+        whereas version 1 requires the directory name to be the package name.
     """
 
     def __init__(
@@ -958,7 +959,7 @@ class Repo:
             f"{os.path.join(root, repo_config_name)} must define a namespace.",
         )
 
-        self.namespace = config["namespace"]
+        self.namespace: str = config["namespace"]
         check(
             re.match(r"[a-zA-Z][a-zA-Z0-9_.]+", self.namespace),
             f"Invalid namespace '{self.namespace}' in repo '{self.root}'. "
@@ -971,7 +972,13 @@ class Repo:
         # Keep name components around for checking prefixes.
         self._names = self.full_namespace.split(".")
 
-        packages_dir = config.get("subdirectory", packages_dir_name)
+        self.version: int = config.get("version", 1)  # repo version 2 is opt-in
+        check(
+            isinstance(self.version, int) and 1 <= self.version <= 2,
+            f"Unsupported repo version {self.version} in '{root}'.",
+        )
+
+        packages_dir: str = config.get("subdirectory", packages_dir_name)
         self.packages_path = os.path.join(self.root, packages_dir)
         check(
             os.path.isdir(self.packages_path), f"No directory '{packages_dir}' found in '{root}'"
@@ -996,21 +1003,24 @@ class Repo:
     def real_name(self, import_name: str) -> Optional[str]:
         """Allow users to import Spack packages using Python identifiers.
 
-        A python identifier might map to many different Spack package
-        names due to hyphen/underscore ambiguity.
+        In repo version 1, there was no canonical module name for a package, and package's dir
+        was not necessarily a valid Python module name. For that case we have to guess the actual
+        package directory. From repo version 2 there is a one-to-one mapping between Spack package
+        names and Python module names, so there is no guessing.
 
-        Easy example:
-            num3proxy   -> 3proxy
-
-        Ambiguous:
+        For repo version 1 we support to the follow one-to-many mappings:
+            num3proxy -> 3proxy
             foo_bar -> foo_bar, foo-bar
-
-        More ambiguous:
             foo_bar_baz -> foo_bar_baz, foo-bar-baz, foo_bar-baz, foo-bar_baz
         """
+        if self.version == 2:
+            return import_name if nm.mod_to_pkg_name(import_name, version=2) in self else None
+
         if import_name in self:
             return import_name
 
+        # For v1 generate the possible package names from a module name, and return the first
+        # package name that exists in this repo.
         options = nm.possible_spack_module_names(import_name)
         try:
             options.remove(import_name)
@@ -1026,7 +1036,7 @@ class Repo:
         parts = fullname.split(".")
         return self._names[: len(parts)] == parts
 
-    def _read_config(self) -> Dict[str, str]:
+    def _read_config(self) -> Dict[str, Any]:
         """Check for a YAML config file in this db's root directory."""
         try:
             with open(self.config_file, encoding="utf-8") as reponame_file:
@@ -1143,16 +1153,14 @@ class Repo:
     def dirname_for_package_name(self, pkg_name: str) -> str:
         """Given a package name, get the directory containing its package.py file."""
         _, unqualified_name = self.partition_package_name(pkg_name)
-        return os.path.join(self.packages_path, unqualified_name)
+        return os.path.join(self.packages_path, nm.pkg_name_to_mod(unqualified_name, self.version))
 
     def filename_for_package_name(self, pkg_name: str) -> str:
-        """Get the filename for the module we should load for a particular
-        package.  Packages for a Repo live in
-        ``$root/<package_name>/package.py``
+        """Get the filename for the module we should load for a particular package. Packages for a
+        Repo live in ``$root/<package_name>/package.py``
 
-        This will return a proper package.py path even if the
-        package doesn't exist yet, so callers will need to ensure
-        the package exists before importing.
+        This will return a proper package.py path even if the package doesn't exist yet, so callers
+        will need to ensure the package exists before importing.
         """
         pkg_dir = self.dirname_for_package_name(pkg_name)
         return os.path.join(pkg_dir, package_file_name)
@@ -1160,7 +1168,7 @@ class Repo:
     @property
     def _pkg_checker(self) -> FastPackageChecker:
         if self._fast_package_checker is None:
-            self._fast_package_checker = FastPackageChecker(self.packages_path)
+            self._fast_package_checker = FastPackageChecker(self.packages_path, self.version)
         return self._fast_package_checker
 
     def all_package_names(self, include_virtuals: bool = False) -> List[str]:
@@ -1226,13 +1234,12 @@ class Repo:
     def get_pkg_class(self, pkg_name: str) -> Type["spack.package_base.PackageBase"]:
         """Get the class for the package out of its module.
 
-        First loads (or fetches from cache) a module for the
-        package. Then extracts the package class from the module
-        according to Spack's naming convention.
+        First loads (or fetches from cache) a module for the package. Then extracts the package
+        class from the module according to Spack's naming convention.
         """
-        namespace, pkg_name = self.partition_package_name(pkg_name)
-        class_name = nm.mod_to_class(pkg_name)
-        fullname = f"{self.full_namespace}.{pkg_name}"
+        _, pkg_name = self.partition_package_name(pkg_name)
+        fullname = f"{self.full_namespace}.{nm.pkg_name_to_mod(pkg_name, self.version)}"
+        class_name = nm.pkg_name_to_class_name(pkg_name)
 
         try:
             with REPOS_FINDER.switch_repo(self._finder or self):
@@ -1358,16 +1365,17 @@ def create_repo(root, namespace=None, subdir=packages_dir_name):
     if not os.access(parent, os.R_OK | os.W_OK):
         raise BadRepoError("Cannot create repository in %s: can't access parent!" % root)
 
-    try:
-        config_path = os.path.join(root, repo_config_name)
-        packages_path = os.path.join(root, subdir)
+    config_path = os.path.join(root, repo_config_name)
+    packages_path = os.path.join(root, subdir)
 
+    try:
         fs.mkdirp(packages_path)
         with open(config_path, "w", encoding="utf-8") as config:
             config.write("repo:\n")
             config.write(f"  namespace: '{namespace}'\n")
             if subdir != packages_dir_name:
                 config.write(f"  subdirectory: '{subdir}'\n")
+            config.write("  version: 2\n")
 
     except OSError as e:
         # try to clean up.
@@ -1485,7 +1493,7 @@ class MockRepositoryBuilder:
                 ``spack.dependency.default_deptype`` and ``spack.spec.Spec()`` are used.
         """
         dependencies = dependencies or []
-        context = {"cls_name": nm.mod_to_class(name), "dependencies": dependencies}
+        context = {"cls_name": nm.pkg_name_to_class_name(name), "dependencies": dependencies}
         template = spack.tengine.make_environment().get_template("mock-repository/package.pyt")
         text = template.render(context)
         package_py = self.recipe_filename(name)
@@ -1497,8 +1505,10 @@ class MockRepositoryBuilder:
         package_py = self.recipe_filename(name)
         shutil.rmtree(os.path.dirname(package_py))
 
-    def recipe_filename(self, name):
-        return os.path.join(self.root, "packages", name, "package.py")
+    def recipe_filename(self, name: str):
+        return os.path.join(
+            self.root, "packages", nm.pkg_name_to_mod(name, version=2), "package.py"
+        )
 
 
 class RepoError(spack.error.SpackError):

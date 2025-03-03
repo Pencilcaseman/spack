@@ -1826,7 +1826,7 @@ class TestConcretize:
             assert s.namespace == "myrepo"
             PackageInstaller([s.package], fake=True, explicit=True).install()
 
-        del sys.modules["spack.pkg.myrepo.pkg-c"]
+        del sys.modules["spack.pkg.myrepo.pkg_c"]
         del sys.modules["spack.pkg.myrepo"]
         builder.remove("pkg-c")
         with spack.repo.use_repositories(builder.root, override=False) as repos:

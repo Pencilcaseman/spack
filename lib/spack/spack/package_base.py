@@ -48,7 +48,9 @@ import spack.spec
 import spack.store
 import spack.url
 import spack.util.environment
+import spack.util.naming
 import spack.util.path
+import spack.util.spack_yaml
 import spack.util.web
 import spack.variant
 from spack.error import InstallError, NoURLError, PackageError
@@ -508,6 +510,11 @@ class DisableRedistribute:
         self.binary = binary
 
 
+#: Maps repo.yaml file paths to their version number, to avoid re-reading the file. This is
+#: needed to compute the package name from its module name for repos with version 2.
+REPO_VERSION: Dict[str, int] = {}
+
+
 class PackageBase(WindowsRPath, PackageViewMixin, metaclass=PackageMeta):
     """This is the superclass for all spack packages.
 
@@ -849,13 +856,28 @@ class PackageBase(WindowsRPath, PackageViewMixin, metaclass=PackageMeta):
     def name(cls):
         """The name of this package.
 
-        The name of a package is the name of its Python module, without
-        the containing module names.
+        The name of a package depends on the repo version. In v1 on the package name is its
+        module name. In v2 it needs translation.
         """
         if cls._name is None:
-            cls._name = cls.module.__name__
-            if "." in cls._name:
-                cls._name = cls._name[cls._name.rindex(".") + 1 :]
+            repo_yaml = os.path.join(
+                os.path.dirname(cls.module.__file__), os.pardir, os.pardir, "repo.yaml"
+            )
+
+            version = REPO_VERSION.get(repo_yaml)
+
+            if version is None:
+                try:
+                    with open(repo_yaml, encoding="utf-8") as f:
+                        version = int(spack.util.spack_yaml.load(f)["repo"].get("version", 1))
+                except Exception:
+                    version = 1
+
+                REPO_VERSION[repo_yaml] = version
+
+            name = cls.module.__name__
+
+            cls._name = spack.util.naming.mod_to_pkg_name(name[name.rindex(".") + 1 :], version)
         return cls._name
 
     @classproperty

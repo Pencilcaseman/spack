@@ -11,6 +11,7 @@ import spack.paths
 import spack.repo
 import spack.spec
 import spack.util.file_cache
+import spack.util.naming
 
 
 @pytest.fixture(params=["packages", "", "foo"])
@@ -319,3 +320,77 @@ class TestRepoPath:
         # foo is not there, raise
         with pytest.raises(spack.repo.UnknownNamespaceError):
             repo.get_repo("foo")
+
+
+def test_mod_to_pkg_name_and_reverse():
+    # In repo v1 the dirname/module name is the package name
+    assert spack.util.naming.mod_to_pkg_name("zlib_ng", version=1) == "zlib_ng"
+    assert spack.util.naming.mod_to_pkg_name("_3example_4", version=1) == "_3example_4"
+    assert spack.util.naming.pkg_name_to_mod("zlib_ng", version=1) == "zlib_ng"
+    assert spack.util.naming.pkg_name_to_mod("_3example_4", version=1) == "_3example_4"
+
+    # In repo v2 there is a 1-1 mapping between module and package names
+    assert spack.util.naming.mod_to_pkg_name("_3example_4", version=2) == "3example-4"
+    assert spack.util.naming.mod_to_pkg_name("zlib_ng", version=2) == "zlib-ng"
+    assert spack.util.naming.pkg_name_to_mod("zlib-ng", version=2) == "zlib_ng"
+    assert spack.util.naming.pkg_name_to_mod("3example-4", version=2) == "_3example_4"
+
+
+def test_repo_v2_invalid_module_name(tmp_path: pathlib.Path, capsys):
+    # Create a repo with a v2 structure
+    repo_dir = tmp_path / "repo_1"
+    repo_dir.mkdir()
+    (repo_dir / "repo.yaml").write_text(
+        """
+repo:
+  namespace: repo_1
+  version: 2
+"""
+    )
+    # Create an invalid module name
+    (repo_dir / "packages" / "zlib-ng").mkdir(parents=True)
+    (repo_dir / "packages" / "zlib-ng" / "package.py").write_text(
+        """
+from spack.package import Package
+
+class ZlibNg(Package):
+    pass
+"""
+    )
+
+    cache = spack.util.file_cache.FileCache(tmp_path / "cache")
+    repo = spack.repo.Repo(str(repo_dir), cache=cache)
+    with spack.repo.use_repositories(repo):
+        assert len(repo.all_package_names()) == 0
+    assert (
+        '"zlib-ng" is not a valid Spack module name for repo version 2' in capsys.readouterr().err
+    )
+
+
+def test_repo_v2_module_and_class_to_package_name(tmp_path: pathlib.Path, capsys):
+    # Create a repo with a v2 structure
+    repo_dir = tmp_path / "repo_2"
+    repo_dir.mkdir()
+    (repo_dir / "repo.yaml").write_text(
+        """
+repo:
+  namespace: repo_2
+  version: 2
+"""
+    )
+    # Create an invalid module name
+    (repo_dir / "packages" / "_1example_2_test").mkdir(parents=True)
+    (repo_dir / "packages" / "_1example_2_test" / "package.py").write_text(
+        """
+from spack.package import Package
+
+class _1example2Test(Package):
+    pass
+"""
+    )
+
+    with spack.repo.use_repositories(str(repo_dir)) as repo:
+        assert repo.exists("1example-2-test")
+        pkg_cls = repo.get_pkg_class("1example-2-test")
+        assert pkg_cls.name == "1example-2-test"
+        assert pkg_cls.module.__name__ == "spack.pkg.repo_2._1example_2_test"

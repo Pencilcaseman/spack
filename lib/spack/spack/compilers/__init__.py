@@ -27,7 +27,7 @@ import spack.repo
 import spack.spec
 from spack.operating_systems import windows_os
 from spack.util.environment import get_path
-from spack.util.naming import mod_to_class
+from spack.util.naming import pkg_name_to_class_name
 
 _other_instance_vars = [
     "modules",
@@ -612,7 +612,7 @@ def class_for_compiler_name(compiler_name):
 
     module_name = ".".join(["spack", "compilers", submodule_name])
     module_obj = importlib.import_module(module_name)
-    cls = getattr(module_obj, mod_to_class(compiler_name))
+    cls = getattr(module_obj, pkg_name_to_class_name(compiler_name))
 
     # make a note of the name in the module so we can get to it easily.
     cls.name = compiler_name
