@@ -2133,7 +2133,7 @@ handles ``RPATH``:
 
 .. _pyside-patch:
 
-.. literalinclude:: _spack_root/var/spack/repos/builtin/packages/py-pyside/package.py
+.. literalinclude:: _spack_root/var/spack/repos/builtin/packages/py_pyside/package.py
    :pyobject: PyPyside.patch
    :linenos:
 
