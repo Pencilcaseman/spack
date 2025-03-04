@@ -23,11 +23,14 @@ PRERELEASE_TO_STRING = ["alpha", "beta", "rc"]
 STRING_TO_PRERELEASE = {"alpha": ALPHA, "beta": BETA, "rc": RC, "final": FINAL}
 
 
+def is_git_commit_sha(string: str) -> bool:
+    return len(string) == 40 and bool(COMMIT_VERSION.match(string))
+
+
 def is_git_version(string: str) -> bool:
     return (
         string.startswith("git.")
-        or len(string) == 40
-        and bool(COMMIT_VERSION.match(string))
+        or is_git_commit_sha(string)
         or "=" in string[1:]
     )
 

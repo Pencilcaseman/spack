@@ -4207,8 +4207,7 @@ def _specs_with_commits(spec):
             " does not meet commit syntax requirements."
         )
 
-        # TODO probably want a more specific function just for sha validation
-        assert vn.is_git_version(spec.variants["commit"].value), invalid_commit_msg
+        assert vn.is_git_commit_sha(spec.variants["commit"].value), invalid_commit_msg
 
     # Specs with GitVersions
     # - must have a commit variant, or add it here
