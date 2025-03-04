@@ -384,7 +384,7 @@ class FastPackageChecker(collections.abc.Mapping):
                 if not file_name.startswith(".") and file_name != "repo.yaml":
                     tty.warn(
                         f'Skipping package at {pkg_dir}. "{file_name}" is not a valid Spack '
-                        f"module name for repo version {self.repo_version}."
+                        f"package module name for repo version {self.repo_version}."
                     )
                 continue
 

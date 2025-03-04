@@ -347,7 +347,7 @@ repo:
   version: 2
 """
     )
-    # Create an invalid module name
+    # Create two invalid module names
     (repo_dir / "packages" / "zlib-ng").mkdir(parents=True)
     (repo_dir / "packages" / "zlib-ng" / "package.py").write_text(
         """
@@ -357,14 +357,22 @@ class ZlibNg(Package):
     pass
 """
     )
+    (repo_dir / "packages" / "UPPERCASE").mkdir(parents=True)
+    (repo_dir / "packages" / "UPPERCASE" / "package.py").write_text(
+        """
+from spack.package import Package
 
-    cache = spack.util.file_cache.FileCache(tmp_path / "cache")
-    repo = spack.repo.Repo(str(repo_dir), cache=cache)
-    with spack.repo.use_repositories(repo):
-        assert len(repo.all_package_names()) == 0
-    assert (
-        '"zlib-ng" is not a valid Spack module name for repo version 2' in capsys.readouterr().err
+class Uppercase(Package):
+    pass
+"""
     )
+
+    with spack.repo.use_repositories(str(repo_dir)) as repo:
+        assert len(repo.all_package_names()) == 0
+
+    stderr = capsys.readouterr().err
+    assert '"zlib-ng" is not a valid Spack package module name for repo version 2' in stderr
+    assert '"UPPERCASE" is not a valid Spack package module name for repo version 2' in stderr
 
 
 def test_repo_v2_module_and_class_to_package_name(tmp_path: pathlib.Path, capsys):

@@ -20,7 +20,7 @@ __all__ = [
 
 # Valid module names can contain '-' but can't start with it.
 _valid_module_re_v1 = re.compile(r"^\w[\w-]*$")
-_valid_module_re_v2 = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+_valid_module_re_v2 = re.compile(r"^[a-z_][a-z0-9_]*$")
 
 
 def pkg_name_to_class_name(pkg_name: str):
