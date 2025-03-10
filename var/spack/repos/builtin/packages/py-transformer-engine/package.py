@@ -18,7 +18,7 @@ class PyTransformerEngine(PythonPackage):
 
     license("Apache-2.0")
 
-    version("1.4", tag="v1.4", submodules=True)
+    version("1.4", tag="v1.4", commit="0fbc76af3733ae997394eaf82b78ff9c0498fe91", submodules=True)
     version("main", branch="main", submodules=True)
 
     depends_on("cxx", type="build")  # generated

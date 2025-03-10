@@ -14,7 +14,9 @@ class Paddle(CMakePackage):
     maintainers("fpruvost")
 
     version("master", branch="master", submodules=True)
-    version("0.3.7", tag="0.3.7", submodules=True)
+    version(
+        "0.3.7", tag="0.3.7", commit="dc1d72ab79e1159e7cbdf73311d048f5387eb92c", submodules=True
+    )
 
     depends_on("c", type="build")  # generated
     depends_on("fortran", type="build")  # generated

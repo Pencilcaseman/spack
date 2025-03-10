@@ -18,12 +18,12 @@ class Masa(AutotoolsPackage):
     license("LGPL-2.1-or-later")
 
     version("master", branch="master")
-    version("0.51.0", tag="0.51.0")
-    version("0.50.0", tag="0.50.0")
-    version("0.44.0", tag="0.44.0")
-    version("0.43.1", tag="0.43.1")
-    version("0.43.0", tag="0.43.0")
-    version("0.42.0", tag="0.42.0")
+    version("0.51.0", tag="0.51.0", commit="0c3d57b4e7e3a9edde40e88d983b15e342df0231")
+    version("0.50.0", tag="0.50.0", commit="576bd28f7b9c45732aac009bd6ee3c37ea9f52e1")
+    version("0.44.0", tag="0.44.0", commit="36a7b9b2f8f29ed6bb9e126f4526be999bfdaca0")
+    version("0.43.1", tag="0.43.1", commit="3575ad0579989b4ae32eca131f92515105ad13c9")
+    version("0.43.0", tag="0.43.0", commit="8cec2142f4e959a50d2985de2ea0b300e4334aa5")
+    version("0.42.0", tag="0.42.0", commit="882ca692432d2b98dd03b61cf052c9a210f20f84")
 
     depends_on("c", type="build")
     depends_on("cxx", type="build")

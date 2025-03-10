@@ -22,11 +22,11 @@ class PyTorchNvidiaApex(PythonPackage, CudaPackage):
         sha256="065bc5c0146ee579d5db2b38ca3949da4dc799b871961a2c9eb19e18892166ce",
         preferred=True,
     )
-    version("23.08", tag="23.08")
-    version("23.07", tag="23.07")
-    version("23.06", tag="23.06")
-    version("23.05", tag="23.05")
-    version("22.03", tag="22.03")
+    version("23.08", tag="23.08", commit="bae1f93d033716dc9115a0baf7bcda328addabe9")
+    version("23.07", tag="23.07", commit="03fd633ed736cbda3b71adb466301e21138ae4f8")
+    version("23.06", tag="23.06", commit="4891351604914f40fabb889b34f92c43466e404d")
+    version("23.05", tag="23.05", commit="0da3ffb92ee6fbe5336602f0e3989db1cd16f880")
+    version("22.03", tag="22.03", commit="59978d5e37612606e2f9ef334a7687360fbaf19e")
     version("2020-10-19", commit="8a1ed9e8d35dfad26fb973996319965e4224dcdd", deprecated=True)
 
     depends_on("c", type="build")

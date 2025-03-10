@@ -24,7 +24,7 @@ class Cbqn(MakefilePackage):
 
     version("master", branch="master")
     version("develop", branch="develop")
-    version("0.7.0", tag="v0.7.0")
+    version("0.7.0", tag="v0.7.0", commit="05690c001a41e2fe7ad9d7bae3c74694b3fe446b")
 
     depends_on("c", type="build")
 

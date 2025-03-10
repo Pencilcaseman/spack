@@ -19,7 +19,7 @@ class OtfCpt(CMakePackage):
 
     license("Apache-2.0", checked_by="jgraciahlrs")
 
-    version("0.9", tag="v0.9")
+    version("0.9", tag="v0.9", commit="fac6e269db0b001063316b37d46ac78badaab27f")
 
     depends_on("cxx", type="build")
     depends_on("mpi")
