@@ -95,6 +95,15 @@ properties: Dict[str, Any] = {
             "timeout": {"type": "integer", "minimum": 0},
             "error_on_timeout": {"type": "boolean"},
             "os_compatible": {"type": "object", "additionalProperties": {"type": "array"}},
+            "cache": {
+                "type": "object",
+                "properties": {
+                    "enable": {"type": "boolean"},
+                    "path": {"type": "string"},
+                    "entry_limit": {"type": "integer", "minimum": 0},
+                    "size_limit": {"type": "integer", "minimum": 0},
+                },
+            },
         },
     }
 }

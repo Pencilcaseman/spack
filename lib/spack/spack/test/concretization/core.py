@@ -3278,7 +3278,7 @@ def test_concretization_cache_roundtrip(use_concretization_cache, monkeypatch, m
     # monkeypatch our forced determinism setup method into solver setup
     monkeypatch.setattr(spack.solver.asp.SpackSolverSetup, "setup", _setup)
 
-    assert spack.config.get("config:concretization_cache:enable")
+    assert spack.config.get("concretizer:cache:enable")
 
     # run one standard concretization to populate the cache and the setup method
     # memoization
