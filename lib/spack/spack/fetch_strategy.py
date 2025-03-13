@@ -1617,24 +1617,17 @@ def for_package_version(pkg, version=None):
         else:
             ref_type = "commit" if version.is_commit else "tag"
             ref_value = version.ref
-        kwargs = {ref_type: ref_value, "no_cache": True}
 
-        kwargs["git"] = pkg.git
-        version_attrs = pkg.versions.get(version)
-        if version_attrs and version_attrs.get("git"):
-            kwargs["git"] = version_attrs["git"]
-
-        kwargs["submodules"] = getattr(pkg, "submodules", False)
+        kwargs = {ref_type: ref_value, "no_cache": ref_type != "commit"}
+        kwargs["git"] = pkg.version_or_package_attr("git", version)
+        kwargs["submodules"] = pkg.version_or_package_attr("submodules", version, False)
 
         # if the ref_version is a known version from the package, use that version's
-        # submodule specifications
-        if hasattr(pkg.version, "ref_version"):
-            ref_version_attributes = pkg.versions.get(pkg.version.ref_version)
-            if ref_version_attributes:
-                kwargs["submodules"] = ref_version_attributes.get(
-                    "submodules", kwargs["submodules"]
-                )
-                kwargs["git"] = ref_version_attributes.get("git", kwargs["git"])
+        # attributes
+        ref_version = getattr(pkg.version, "ref_version")
+        if ref_version:
+            kwargs["git"] = pkg.version_or_package_attr("git", ref_version)
+            kwargs["submodules"] = pkg.version_or_package_attr("submodules", ref_version, False)
 
         fetcher = GitFetchStrategy(**kwargs)
         return fetcher
