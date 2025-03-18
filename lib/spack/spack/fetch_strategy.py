@@ -1624,7 +1624,7 @@ def for_package_version(pkg, version=None):
 
         # if the ref_version is a known version from the package, use that version's
         # attributes
-        ref_version = getattr(pkg.version, "ref_version")
+        ref_version = getattr(pkg.version, "ref_version", None)
         if ref_version:
             kwargs["git"] = pkg.version_or_package_attr("git", ref_version)
             kwargs["submodules"] = pkg.version_or_package_attr("submodules", ref_version, False)
