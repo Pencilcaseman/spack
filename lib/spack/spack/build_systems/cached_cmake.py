@@ -301,9 +301,7 @@ class CachedCMakeBuilder(CMakeBuilder):
                 if os.path.basename(os.path.normpath(llvm_prefix)) != "llvm":
                     llvm_bin = os.path.join(llvm_prefix, "llvm/bin/")
                 entries.append(
-                    cmake_cache_filepath(
-                        "CMAKE_HIP_COMPILER", os.path.join(llvm_bin, "clang++")
-                    )
+                    cmake_cache_filepath("CMAKE_HIP_COMPILER", os.path.join(llvm_bin, "clang++"))
                 )
 
                 archs = self.spec.variants["amdgpu_target"].value
@@ -312,7 +310,6 @@ class CachedCMakeBuilder(CMakeBuilder):
                     entries.append(cmake_cache_string("CMAKE_HIP_ARCHITECTURES", arch_str))
                     entries.append(cmake_cache_string("AMDGPU_TARGETS", arch_str))
                     entries.append(cmake_cache_string("GPU_TARGETS", arch_str))
-
 
             if spec.satisfies("%gcc"):
                 entries.append(
