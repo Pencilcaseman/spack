@@ -350,16 +350,6 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(skip_as_slow)
 
 
-@pytest.fixture(scope="function")
-def use_concretization_cache(mutable_config, tmpdir):
-    """Enables the use of the concretization cache"""
-    spack.config.set("config:concretization_cache:enable", True)
-    # ensure we have an isolated concretization cache
-    new_conc_cache_loc = str(tmpdir.mkdir("concretization"))
-    spack.config.set("config:concretization_cache:path", new_conc_cache_loc)
-    yield
-
-
 #
 # These fixtures are applied to all tests
 #
@@ -2143,7 +2133,7 @@ def _c_compiler_always_exists():
 @pytest.fixture(scope="session")
 def mock_test_cache(tmp_path_factory):
     cache_dir = tmp_path_factory.mktemp("cache")
-    return spack.util.file_cache.FileCache(cache_dir)
+    return spack.util.file_cache.FileCache(str(cache_dir))
 
 
 class MockHTTPResponse(io.IOBase):
