@@ -278,9 +278,19 @@ class CachedCMakeBuilder(CMakeBuilder):
             entries.append("# ROCm")
             entries.append("#------------------{0}\n".format("-" * 30))
 
+            # Starting with blt@0.7, support for hip is handled with
+            # CMake enable_language(HIP).
+            # TODO: consider applying this all the time, and let package
+            # add specifics when necessary, e.g. when not using CMake
+            # support for HIP.
             if spec.satisfies("^blt@0.7:"):
                 rocm_root = os.path.dirname(spec["llvm-amdgpu"].prefix)
                 entries.append(cmake_cache_path("ROCM_PATH", rocm_root))
+
+                archs = self.spec.variants["amdgpu_target"].value
+                if archs[0] != "none":
+                    arch_str = ";".join(archs)
+                    entries.append(cmake_cache_string("CMAKE_HIP_ARCHITECTURES", arch_str))
             else:
                 # Explicitly setting HIP_ROOT_DIR may be a patch that is no longer necessary
                 entries.append(cmake_cache_path("HIP_ROOT_DIR", "{0}".format(spec["hip"].prefix)))
@@ -292,16 +302,17 @@ class CachedCMakeBuilder(CMakeBuilder):
                     llvm_bin = os.path.join(llvm_prefix, "llvm/bin/")
                 entries.append(
                     cmake_cache_filepath(
-                        "CMAKE_HIP_COMPILER", os.path.join(llvm_bin, "amdclang++")
+                        "CMAKE_HIP_COMPILER", os.path.join(llvm_bin, "clang++")
                     )
                 )
 
-            archs = self.spec.variants["amdgpu_target"].value
-            if archs[0] != "none":
-                arch_str = ";".join(archs)
-                entries.append(cmake_cache_string("CMAKE_HIP_ARCHITECTURES", arch_str))
-                entries.append(cmake_cache_string("AMDGPU_TARGETS", arch_str))
-                entries.append(cmake_cache_string("GPU_TARGETS", arch_str))
+                archs = self.spec.variants["amdgpu_target"].value
+                if archs[0] != "none":
+                    arch_str = ";".join(archs)
+                    entries.append(cmake_cache_string("CMAKE_HIP_ARCHITECTURES", arch_str))
+                    entries.append(cmake_cache_string("AMDGPU_TARGETS", arch_str))
+                    entries.append(cmake_cache_string("GPU_TARGETS", arch_str))
+
 
             if spec.satisfies("%gcc"):
                 entries.append(
