@@ -2,17 +2,19 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import collections.abc
+import enum
 import os
 import re
-from typing import Tuple
+from typing import Optional, Tuple
 
 import llnl.util.filesystem as fs
 import llnl.util.tty as tty
 
 import spack.phase_callbacks
-import spack.spec
 import spack.util.prefix
 from spack.directives import depends_on
+from spack.spec import Spec
+from spack.util.executable import which_string
 
 from .cmake import CMakeBuilder, CMakePackage
 
@@ -46,6 +48,62 @@ def cmake_cache_option(name, boolean_value, comment="", force=False):
 def cmake_cache_filepath(name, value, comment=""):
     """Generate a string for a cmake cache variable of type FILEPATH"""
     return 'set({0} "{1}" CACHE FILEPATH "{2}")\n'.format(name, value, comment)
+
+
+class Scheduler(enum.Enum):
+    LSF = enum.auto()
+    SLURM = enum.auto()
+    FLUX = enum.auto()
+
+
+def get_scheduler(spec: Spec) -> Optional[Scheduler]:
+    if spec.satisfies("^spectrum-mpi") or spec["mpi"].satisfies("schedulers=lsf"):
+        return Scheduler.LSF
+
+    slurm_checks = ["+slurm", "schedulers=slurm", "process_managers=slurm"]
+    if any(spec["mpi"].satisfies(variant) for variant in slurm_checks):
+        return Scheduler.SLURM
+
+    # TODO improve this when MPI implementations support flux
+    if which_string("flux") is not None:
+        return Scheduler.FLUX
+
+    return None
+
+
+def get_mpi_exec(spec: Spec) -> Optional[str]:
+    scheduler = get_scheduler(spec)
+
+    if scheduler == Scheduler.LSF:
+        return which_string("lrun")
+
+    elif scheduler == Scheduler.SLURM:
+        if spec["mpi"].external:
+            return which_string("srun")
+        else:
+            return os.path.join(spec["slurm"].prefix.bin, "srun")
+
+    elif scheduler == Scheduler.FLUX:
+        flux = which_string("flux")
+        return f"{flux};run" if flux else None
+
+    elif hasattr(spec["mpi"].package, "mpiexec"):
+        return spec["mpi"].package.mpiexec
+
+    else:
+        mpiexec = os.path.join(spec["mpi"].prefix.bin, "mpirun")
+        if not os.path.exists(mpiexec):
+            mpiexec = os.path.join(spec["mpi"].prefix.bin, "mpiexec")
+        return mpiexec
+
+
+def get_mpi_exec_num_proc(spec: Spec) -> str:
+    scheduler = get_scheduler(spec)
+
+    if scheduler in [Scheduler.FLUX, Scheduler.LSF, Scheduler.SLURM]:
+        return "-n"
+    else:
+        return "-np"
 
 
 class CachedCMakeBuilder(CMakeBuilder):
@@ -199,27 +257,10 @@ class CachedCMakeBuilder(CMakeBuilder):
         if hasattr(spec["mpi"], "mpifc"):
             entries.append(cmake_cache_path("MPI_Fortran_COMPILER", spec["mpi"].mpifc))
 
-        # Check for slurm
-        using_slurm = False
-        slurm_checks = ["+slurm", "schedulers=slurm", "process_managers=slurm"]
-        if any(spec["mpi"].satisfies(variant) for variant in slurm_checks):
-            using_slurm = True
-
         # Determine MPIEXEC
-        if using_slurm:
-            if spec["mpi"].external:
-                # Heuristic until we have dependents on externals
-                mpiexec = "/usr/bin/srun"
-            else:
-                mpiexec = os.path.join(spec["slurm"].prefix.bin, "srun")
-        elif hasattr(spec["mpi"].package, "mpiexec"):
-            mpiexec = spec["mpi"].package.mpiexec
-        else:
-            mpiexec = os.path.join(spec["mpi"].prefix.bin, "mpirun")
-            if not os.path.exists(mpiexec):
-                mpiexec = os.path.join(spec["mpi"].prefix.bin, "mpiexec")
+        mpiexec = get_mpi_exec(spec)
 
-        if not os.path.exists(mpiexec):
+        if mpiexec is None or not os.path.exists(mpiexec.split(";")[0]):
             msg = "Unable to determine MPIEXEC, %s tests may fail" % self.pkg.name
             entries.append("# {0}\n".format(msg))
             tty.warn(msg)
@@ -232,10 +273,7 @@ class CachedCMakeBuilder(CMakeBuilder):
                 entries.append(cmake_cache_path("MPIEXEC", mpiexec))
 
         # Determine MPIEXEC_NUMPROC_FLAG
-        if using_slurm:
-            entries.append(cmake_cache_string("MPIEXEC_NUMPROC_FLAG", "-n"))
-        else:
-            entries.append(cmake_cache_string("MPIEXEC_NUMPROC_FLAG", "-np"))
+        entries.append(cmake_cache_string("MPIEXEC_NUMPROC_FLAG", get_mpi_exec_num_proc(spec)))
 
         return entries
 
@@ -341,7 +379,7 @@ class CachedCMakeBuilder(CMakeBuilder):
         return []
 
     def initconfig(
-        self, pkg: "CachedCMakePackage", spec: spack.spec.Spec, prefix: spack.util.prefix.Prefix
+        self, pkg: "CachedCMakePackage", spec: Spec, prefix: spack.util.prefix.Prefix
     ) -> None:
         cache_entries = (
             self.std_initconfig_entries()
