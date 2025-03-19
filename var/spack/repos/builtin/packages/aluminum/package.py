@@ -104,7 +104,7 @@ class Aluminum(CachedCMakePackage, CudaPackage, ROCmPackage):
                     "nccl +cuda cuda_arch={0}".format(arch),
                     when="+cuda cuda_arch={0}".format(arch),
                 )
-            if spack.platforms.cray.slingshot_network():
+            if spack.platforms.cray.slingshot_network() and True:
                 depends_on("aws-ofi-nccl")  # Note: NOT a CudaPackage
 
     with when("+rocm"):
