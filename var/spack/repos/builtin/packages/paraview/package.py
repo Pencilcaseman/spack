@@ -231,7 +231,7 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("mpi", when="+mpi")
     conflicts("mpi", when="~mpi")
 
-    with when("+qt")
+    with when("+qt"):
         depends_on("qmake", when="@5.12.0:")
         depends_on("qt", when="@5.3.0:5.11")
         depends_on("qt@:4", when="@:5.2.0")
