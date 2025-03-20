@@ -2014,11 +2014,13 @@ class PackageInstaller:
 
     def install(self) -> None:
         """Install the requested package(s) and or associated dependencies."""
+        spack.hooks.pre_installer([r.pkg.spec for r in self.build_requests])
 
         self._init_queue()
         fail_fast_err = "Terminating after first install failure"
         single_requested_spec = len(self.build_requests) == 1
         failed_build_requests = []
+        failed_tasks = []  # self.failed tracks dependents of failed tasks, here only failures
 
         install_status = InstallStatus(len(self.build_pq))
 
@@ -2171,13 +2173,24 @@ class PackageInstaller:
             except KeyboardInterrupt as exc:
                 # The build has been terminated with a Ctrl-C so terminate
                 # regardless of the number of remaining specs.
+                failed_tasks.append((pkg, exc))
                 tty.error(
                     f"Failed to install {pkg.name} due to " f"{exc.__class__.__name__}: {str(exc)}"
                 )
+                hashes_to_failures = {pkg.spec.dag_hash(): exc for pkg, exc in failed_tasks}
+                spack.hooks.post_installer(
+                    [r.pkg.spec for r in self.build_requests], hashes_to_failures
+                )
+                print("DDDDDD")
                 raise
 
             except binary_distribution.NoChecksumException as exc:
                 if task.cache_only:
+                    failed_tasks.append((pkg, exc))
+                    hashes_to_failures = {pkg.spec.dag_hash(): exc for pkg, exc in failed_tasks}
+                    spack.hooks.post_installer(
+                        [r.pkg.spec for r in self.build_requests], hashes_to_failures
+                    )
                     raise
 
                 # Checking hash on downloaded binary failed.
@@ -2192,6 +2205,7 @@ class PackageInstaller:
 
             except (Exception, SystemExit) as exc:
                 self._update_failed(task, True, exc)
+                failed_tasks.append((pkg, exc))
 
                 # Best effort installs suppress the exception and mark the
                 # package as a failure.
@@ -2204,8 +2218,14 @@ class PackageInstaller:
                         f"Failed to install {pkg.name} due to "
                         f"{exc.__class__.__name__}: {str(exc)}"
                     )
+
                 # Terminate if requested to do so on the first failure.
                 if self.fail_fast:
+                    hashes_to_failures = {pkg.spec.dag_hash(): exc for pkg, exc in failed_tasks}
+                    spack.hooks.post_installer(
+                        [r.pkg.spec for r in self.build_requests], hashes_to_failures
+                    )
+                    print("AAAAAAA")
                     raise spack.error.InstallError(
                         f"{fail_fast_err}: {str(exc)}", pkg=pkg
                     ) from exc
@@ -2213,8 +2233,15 @@ class PackageInstaller:
                 # Terminate when a single build request has failed, or summarize errors later.
                 if task.is_build_request:
                     if single_requested_spec:
+                        hashes_to_failures = {
+                            pkg.spec.dag_hash(): exc for pkg, exc in failed_tasks
+                        }
+                        spack.hooks.post_installer(
+                            [r.pkg.spec for r in self.build_requests], hashes_to_failures
+                        )
+                        print("BBBBB")
                         raise
-                    failed_build_requests.append((pkg, pkg_id, str(exc)))
+                    failed_build_requests.append((pkg, pkg_id, exc))
 
             finally:
                 # Remove the install prefix if anything went wrong during
@@ -2238,9 +2265,13 @@ class PackageInstaller:
             if request.install_args.get("install_package") and request.pkg_id not in self.installed
         ]
 
+        hashes_to_failures = {pkg.spec.dag_hash(): exc for pkg, exc in failed_tasks}
+        spack.hooks.post_installer([r.pkg.spec for r in self.build_requests], hashes_to_failures)
+        print("CCCCC", failed_build_requests)
+
         if failed_build_requests or missing:
             for _, pkg_id, err in failed_build_requests:
-                tty.error(f"{pkg_id}: {err}")
+                tty.error(f"{pkg_id}: {str(err)}")
 
             for _, pkg_id in missing:
                 tty.error(f"{pkg_id}: Package was not installed")

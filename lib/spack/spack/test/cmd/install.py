@@ -450,6 +450,8 @@ def test_junit_output_with_errors(
 
     content = filename.open().read()
 
+    print(content)
+
     # Only libelf error is reported (through libdwarf root spec). libdwarf
     # install is skipped and it is not an error.
     assert 'tests="1"' in content

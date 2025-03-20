@@ -215,6 +215,7 @@ def create_external_pruner() -> Callable[[spack.spec.Spec], RebuildDecision]:
     """Return a filter that prunes external specs"""
 
     def rebuild_filter(s: spack.spec.Spec) -> RebuildDecision:
+        print(s.name, "external:", s.external)
         if not s.external:
             return RebuildDecision(True, "not external")
         return RebuildDecision(False, "external spec")

@@ -27,6 +27,7 @@ from typing import List, Optional
 class _HookRunner:
     #: Order in which hooks are executed
     HOOK_ORDER = [
+        "spack.hooks.report",
         "spack.hooks.module_file_generation",
         "spack.hooks.licensing",
         "spack.hooks.sbang",
@@ -67,3 +68,6 @@ post_install = _HookRunner("post_install")
 
 pre_uninstall = _HookRunner("pre_uninstall")
 post_uninstall = _HookRunner("post_uninstall")
+
+pre_installer = _HookRunner("pre_installer")
+post_installer = _HookRunner("post_installer")

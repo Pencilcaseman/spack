@@ -217,6 +217,7 @@ class CDash(Reporter):
             nerrors = len(errors)
 
             if nerrors > 0:
+                print("NERRORS")
                 self.success = False
                 if phase == "configure":
                     report_data[phase]["status"] = 1
@@ -410,6 +411,7 @@ class CDash(Reporter):
         self.current_package_name = self.base_buildname
         self.upload(output_filename)
         self.success = False
+        print("CONCRETIZATION")
         self.finalize_report()
 
     def initialize_report(self, report_dir):
