@@ -130,7 +130,7 @@ class Lbann(CachedCMakePackage, CudaPackage, ROCmPackage):
     # Align the following variants across Hydrogen and DiHydrogen
     forwarded_variants = ["cuda", "rocm", "half", "nvshmem"]
     for v in forwarded_variants:
-        if v != "nvshmem" and True:
+        if v != "nvshmem" and not False:
             depends_on("hydrogen +{0}".format(v), when="+{0}".format(v))
             depends_on("hydrogen ~{0}".format(v), when="~{0}".format(v))
         if v != "al" and v != "half":

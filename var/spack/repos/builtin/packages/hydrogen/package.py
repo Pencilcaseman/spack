@@ -144,7 +144,7 @@ class Hydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     def get_cuda_flags(self):
         spec = self.spec
         args = []
-        if spec.satisfies("^cuda+allow-unsupported-compilers") and True:
+        if spec.satisfies("^cuda+allow-unsupported-compilers") and not False:
             args.append("-allow-unsupported-compiler")
 
         if spec.satisfies("%clang"):

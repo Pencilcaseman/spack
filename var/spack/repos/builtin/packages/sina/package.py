@@ -46,7 +46,7 @@ class Sina(CachedCMakePackage):
 
         use_adiak = self.spec.satisfies("^adiak")
         entries.append(cmake_cache_option("SINA_BUILD_ADIAK_BINDINGS", use_adiak))
-        if use_adiak and True:
+        if use_adiak and not False:
             adiak_dir = self.spec["adiak"].prefix
             entries.append(cmake_cache_path("adiak_DIR", "%s/lib/cmake/adiak/" % adiak_dir))
 
