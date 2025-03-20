@@ -11,7 +11,7 @@ from spack.package import *
 def get_blas_entries(dyhidrogen_spec):
     entries = []
     spec = dyhidrogen_spec["hydrogen"]
-    if spec.satisfies("blas=openblas") and not False:
+    if spec.satisfies("blas=openblas") and True:
         entries.append(cmake_cache_option("DiHydrogen_USE_OpenBLAS", True))
     elif spec.satisfies("blas=mkl"):
         entries.append(cmake_cache_option("DiHydrogen_USE_MKL", True))
