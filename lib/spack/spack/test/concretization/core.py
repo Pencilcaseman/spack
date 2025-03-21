@@ -6,6 +6,7 @@ import os
 import sys
 
 import jinja2
+import pathlib
 import pytest
 
 import archspec.cpu
@@ -2726,6 +2727,32 @@ class TestConcretize:
         assert s.external
         assert s.satisfies("%clang")
         assert s.prefix == "/tmp/prefix2"
+
+    def test_phil_add_git_based_version_must_exist_to_use_ref(self):
+        s = spack.concretize.concretize_one(f"git-ref-package commit={'a' * 40}")
+        assert s.satisifes("@main")
+
+        #gmake should fail, only has sha256
+        with pytest.raises(AssertionError):
+            s = spack.concretize.concretize_one(f"gmake={'a' * 40}")
+
+
+@pytest.mark.usefixtures("mutable_config", "mock_packages", "do_not_check_runtimes_on_reuse")
+def test_phil_add_git_based_version_commit_must_be_valid(mock_git_version_info, monkeypatch):
+    """Test installing a git package from a commit.
+
+    This ensures Spack associates commit versions with their packages in time to do
+    version lookups. Details of version lookup tested elsewhere.
+
+    """
+    repo_path, filename, commits = mock_git_version_info
+    file_url = pathlib.Path(repo_path).as_uri()
+
+    monkeypatch.setattr(spack.package_base.PackageBase, "git", file_url, raising=False)
+
+    spack.concretize.concretize_one(f"git-test-commit@main commit={commits[0]}")
+    with pytest.raises(AssertionError):
+        spack.concretize.concretize_one(f"git-test-commit@main commit={'a' * 40}")
 
 
 @pytest.fixture()

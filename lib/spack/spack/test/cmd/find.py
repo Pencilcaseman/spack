@@ -8,6 +8,7 @@ import os
 import sys
 from textwrap import dedent
 
+import pathlib
 import pytest
 
 import spack.cmd as cmd
@@ -612,3 +613,18 @@ def test_find_concretized_not_installed(
         assert _nresults(_query(e, "--tag=tag0")) == (1, 0)
         assert _nresults(_query(e, "--tag=tag1")) == (1, 1)
         assert _nresults(_query(e, "--tag=tag2")) == (0, 1)
+
+
+@pytest.mark.usefixtures("install_mockery", "mock_fetch", "mutable_mock_env_path")
+def test_phil_add_find_based_on_commit_sha(mock_git_version_info, monkeypatch):
+    repo_path, filename, commits = mock_git_version_info
+    file_url = pathlib.Path(repo_path).as_uri()
+
+    monkeypatch.setattr(spack.package_base.PackageBase, "git", file_url, raising=False)
+    
+    env("create", "test")
+    with ev.read("test") as e:
+        install("--fake", "--add", f"git-test-commit commit={commits[0]}")
+
+        output = find(f"commit={commits[0]}")
+        assert "git-test-commit" in output
