@@ -64,6 +64,7 @@ class HsaRocrDev(CMakePackage):
     depends_on("numactl")
     depends_on("pkgconfig")
     depends_on("libdrm", when="@6.3:")
+    requires(f"%[virtuals=c,cxx] llvm-amdgpu")
 
     for ver in [
         "5.3.0",
@@ -112,9 +113,7 @@ class HsaRocrDev(CMakePackage):
         "6.3.3",
         "master",
     ]:
-        depends_on(f"llvm-amdgpu@{ver}", when=f"@{ver}")
-        # allow standalone rocm-device-libs (useful for aomp)
-        depends_on(f"rocm-device-libs@{ver}", when=f"@{ver} ^llvm-amdgpu ~rocm-device-libs")
+        requires(f"%llvm-amdgpu@{ver}", when=f"@{ver}")
 
     for ver in [
         "5.5.0",

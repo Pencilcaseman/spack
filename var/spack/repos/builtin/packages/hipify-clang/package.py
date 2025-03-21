@@ -57,6 +57,8 @@ class HipifyClang(CMakePackage):
     depends_on("cxx", type="build")
 
     depends_on("cmake@3.5:", type="build")
+    requires(f"%[virtuals=c,cxx] llvm-amdgpu")
+
     for ver in [
         "5.3.0",
         "5.3.3",
@@ -82,7 +84,7 @@ class HipifyClang(CMakePackage):
         "6.3.3",
         "master",
     ]:
-        depends_on(f"llvm-amdgpu@{ver}", when=f"@{ver}")
+        requires(f"%llvm-amdgpu@{ver}", when=f"@{ver}")
 
     for ver in [
         "5.5.0",

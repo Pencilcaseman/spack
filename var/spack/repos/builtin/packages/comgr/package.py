@@ -68,6 +68,7 @@ class Comgr(CMakePackage):
     depends_on("zlib-api", type="link")
     depends_on("z3", type="link")
     depends_on("ncurses", type="link")
+    requires(f"%[virtuals=c,cxx] llvm-amdgpu")
 
     for ver in [
         "5.3.0",
@@ -94,12 +95,9 @@ class Comgr(CMakePackage):
         "6.3.3",
         "master",
     ]:
-        # llvm libs are linked statically, so this *could* be a build dep
-        depends_on(f"llvm-amdgpu@{ver}", when=f"@{ver}")
-
-        # aomp may not build rocm-device-libs as part of llvm-amdgpu, so make
-        # that a conditional dependency
-        depends_on(f"rocm-device-libs@{ver}", when=f"@{ver} ^llvm-amdgpu ~rocm-device-libs")
+        # in reality this should be a link type dep, but libLLVM is linked statically,
+        # and just requiring llvm-amdgpu as a compiler suffices for now.
+        requires(f"%llvm-amdgpu@{ver}", when=f"@{ver}")
         depends_on(f"rocm-cmake@{ver}", when=f"@{ver}", type="build")
 
     for ver in [
