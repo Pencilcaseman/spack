@@ -1421,6 +1421,7 @@ compiler(Compiler) :- compiler_supports_target(Compiler, _, _).
 language("c").
 language("cxx").
 language("fortran").
+language("hip-lang").
 language_runtime("fortran-rt").
 
 error(10, "Only external, or concrete, compilers are allowed for the {0} language", Language)
