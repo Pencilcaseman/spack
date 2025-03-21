@@ -15,11 +15,17 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
     git = "https://github.com/LLNL/camp.git"
     url = "https://github.com/LLNL/camp/archive/v0.1.0.tar.gz"
 
-    maintainers("trws", "adrienbernede")
+    maintainers("adrienbernede", "kab163", "trws")
 
     license("BSD-3-Clause")
 
     version("main", branch="main", submodules=False)
+    version(
+        "2025.03.0",
+        tag="v2025.03.0",
+        commit="ee0a3069a7ae72da8bcea63c06260fad34901d43",
+        submodules=False,
+    )
     version(
         "2024.07.0",
         tag="v2024.07.0",
@@ -106,7 +112,14 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
 
         options.append(self.define_from_variant("ENABLE_HIP", "rocm"))
         if spec.satisfies("+rocm"):
-            options.append("-DHIP_ROOT_DIR={0}".format(spec["hip"].prefix))
+            rocm_root = dirname(spec["llvm-amdgpu"].prefix)
+            options.append("-DROCM_PATH={0}".format(rocm_root))
+
+            # there is only one dir like this, but the version component is unknown
+            options.append(
+                "-DHIP_CLANG_INCLUDE_PATH="
+                + glob.glob("{}/lib/clang/*/include".format(spec["llvm-amdgpu"].prefix))[0]
+            )
 
             archs = ";".join(self.spec.variants["amdgpu_target"].value)
             options.append("-DCMAKE_HIP_ARCHITECTURES={0}".format(archs))
