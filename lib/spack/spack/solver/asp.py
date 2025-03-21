@@ -2688,6 +2688,8 @@ class SpackSolverSetup:
             if pkg_name not in packages_yaml or "version" not in packages_yaml[pkg_name]:
                 continue
 
+            # TODO(psakiev) Need facts about versions
+            # - requires_commit (associated with tag or branch)
             version_defs: List[GitOrStandardVersion] = []
 
             for vstr in packages_yaml[pkg_name]["version"]:
@@ -3114,6 +3116,7 @@ class SpackSolverSetup:
         specs = tuple(specs)  # ensure compatible types to add
 
         self.gen.h1("Reusable concrete specs")
+        #TODO(psakiev) need fact spec has commit
         self.define_concrete_input_specs(specs, self.pkgs)
         if reuse:
             self.gen.fact(fn.optimize_for_reuse())
@@ -4187,6 +4190,7 @@ class SpecBuilder:
 
 def _specs_with_commits(spec):
     spec.package.resolve_binary_provenance()
+    # TODO(psakiev) assert commit is associated with ref
 
     # method above is in charge of assigning the commit variant
     has_commit_var = "commit" in spec.variants

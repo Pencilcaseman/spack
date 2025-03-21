@@ -257,6 +257,8 @@ pkg_fact(Package, version_declared(Version)) :- pkg_fact(Package, version_declar
 { attr("version", node(ID, Package), Version) : pkg_fact(Package, version_declared(Version)) }
  :- attr("node", node(ID, Package)).
 
+% TODO(psakiev) need rule if spec has commit version must need commit
+
 % A virtual package may or may not have a version, but never has more than one
 error(100, "Cannot select a single version for virtual '{0}'", Virtual)
   :- attr("virtual_node", node(ID, Virtual)),
