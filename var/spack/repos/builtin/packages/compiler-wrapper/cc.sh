@@ -320,7 +320,7 @@ _command_from_flags() {
 
     case "$_lang" in
         c) command=cc ;;
-        c++|f77|f95) command="$_lang" ;;
+        c++|f77|f95|hip) command="$_lang" ;;
         *) command="$command_from_argv0" ;;  # drop unknown languages
     esac
 }
@@ -364,6 +364,14 @@ case "$command" in
         lang_flags=F
         debug_flags="-g"
         vcheck_flags="${SPACK_ALWAYS_FFLAGS}"
+        ;;
+    hip)
+        command="$SPACK_HIPCXX"
+        language="HIP"
+        comp="HIPCXX"
+        lang_flags=HIP
+        debug_flags="-g"
+        vcheck_flags="${SPACK_ALWAYS_HIPCXXFLAGS}"
         ;;
     ld|ld.gold|ld.lld)
         mode=ld
