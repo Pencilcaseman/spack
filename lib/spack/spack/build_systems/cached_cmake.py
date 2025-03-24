@@ -50,62 +50,6 @@ def cmake_cache_filepath(name, value, comment=""):
     return 'set({0} "{1}" CACHE FILEPATH "{2}")\n'.format(name, value, comment)
 
 
-class Scheduler(enum.Enum):
-    LSF = enum.auto()
-    SLURM = enum.auto()
-    FLUX = enum.auto()
-
-
-def get_scheduler(spec: Spec) -> Optional[Scheduler]:
-    if spec.satisfies("^spectrum-mpi") or spec["mpi"].satisfies("schedulers=lsf"):
-        return Scheduler.LSF
-
-    slurm_checks = ["+slurm", "schedulers=slurm", "process_managers=slurm"]
-    if any(spec["mpi"].satisfies(variant) for variant in slurm_checks):
-        return Scheduler.SLURM
-
-    # TODO improve this when MPI implementations support flux
-    if which_string("flux") is not None:
-        return Scheduler.FLUX
-
-    return None
-
-
-def get_mpi_exec(spec: Spec) -> Optional[str]:
-    scheduler = get_scheduler(spec)
-
-    if scheduler == Scheduler.LSF:
-        return which_string("lrun")
-
-    elif scheduler == Scheduler.SLURM:
-        if spec["mpi"].external:
-            return which_string("srun")
-        else:
-            return os.path.join(spec["slurm"].prefix.bin, "srun")
-
-    elif scheduler == Scheduler.FLUX:
-        flux = which_string("flux")
-        return f"{flux};run" if flux else None
-
-    elif hasattr(spec["mpi"].package, "mpiexec"):
-        return spec["mpi"].package.mpiexec
-
-    else:
-        mpiexec = os.path.join(spec["mpi"].prefix.bin, "mpirun")
-        if not os.path.exists(mpiexec):
-            mpiexec = os.path.join(spec["mpi"].prefix.bin, "mpiexec")
-        return mpiexec
-
-
-def get_mpi_exec_num_proc(spec: Spec) -> str:
-    scheduler = get_scheduler(spec)
-
-    if scheduler in [Scheduler.FLUX, Scheduler.LSF, Scheduler.SLURM]:
-        return "-n"
-    else:
-        return "-np"
-
-
 class CachedCMakeBuilder(CMakeBuilder):
     #: Phases of a Cached CMake package
     #: Note: the initconfig phase is used for developer builds as a final phase to stop on
@@ -238,6 +182,60 @@ class CachedCMakeBuilder(CMakeBuilder):
 
         return entries
 
+    class Scheduler(enum.Enum):
+        LSF = enum.auto()
+        SLURM = enum.auto()
+        FLUX = enum.auto()
+
+    def get_scheduler(self) -> Optional[Scheduler]:
+        spec = self.pkg.spec
+        if spec.satisfies("^spectrum-mpi") or spec["mpi"].satisfies("schedulers=lsf"):
+            return self.Scheduler.LSF
+
+        slurm_checks = ["+slurm", "schedulers=slurm", "process_managers=slurm"]
+        if any(spec["mpi"].satisfies(variant) for variant in slurm_checks):
+            return self.Scheduler.SLURM
+
+        # TODO improve this when MPI implementations support flux
+        if which_string("flux") is not None:
+            return self.Scheduler.FLUX
+
+        return None
+
+    def get_mpi_exec(self) -> Optional[str]:
+        spec = self.pkg.spec
+        scheduler = self.get_scheduler()
+
+        if scheduler == self.Scheduler.LSF:
+            return which_string("lrun")
+
+        elif scheduler == self.Scheduler.SLURM:
+            if spec["mpi"].external:
+                return which_string("srun")
+            else:
+                return os.path.join(spec["slurm"].prefix.bin, "srun")
+
+        elif scheduler == self.Scheduler.FLUX:
+            flux = which_string("flux")
+            return f"{flux};run" if flux else None
+
+        elif hasattr(spec["mpi"].package, "mpiexec"):
+            return spec["mpi"].package.mpiexec
+
+        else:
+            mpiexec = os.path.join(spec["mpi"].prefix.bin, "mpirun")
+            if not os.path.exists(mpiexec):
+                mpiexec = os.path.join(spec["mpi"].prefix.bin, "mpiexec")
+            return mpiexec
+
+    def get_mpi_exec_num_proc(self) -> str:
+        scheduler = self.get_scheduler()
+
+        if scheduler in [self.Scheduler.FLUX, self.Scheduler.LSF, self.Scheduler.SLURM]:
+            return "-n"
+        else:
+            return "-np"
+
     def initconfig_mpi_entries(self):
         spec = self.pkg.spec
 
@@ -258,7 +256,7 @@ class CachedCMakeBuilder(CMakeBuilder):
             entries.append(cmake_cache_path("MPI_Fortran_COMPILER", spec["mpi"].mpifc))
 
         # Determine MPIEXEC
-        mpiexec = get_mpi_exec(spec)
+        mpiexec = self.get_mpi_exec()
 
         if mpiexec is None or not os.path.exists(mpiexec.split(";")[0]):
             msg = "Unable to determine MPIEXEC, %s tests may fail" % self.pkg.name
@@ -273,7 +271,7 @@ class CachedCMakeBuilder(CMakeBuilder):
                 entries.append(cmake_cache_path("MPIEXEC", mpiexec))
 
         # Determine MPIEXEC_NUMPROC_FLAG
-        entries.append(cmake_cache_string("MPIEXEC_NUMPROC_FLAG", get_mpi_exec_num_proc(spec)))
+        entries.append(cmake_cache_string("MPIEXEC_NUMPROC_FLAG", self.get_mpi_exec_num_proc()))
 
         return entries
 
