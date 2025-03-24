@@ -444,7 +444,7 @@ def _precedence(obj) -> int:
     """Get either a 'precedence' attribute or item from an object."""
     precedence = getattr(obj, "precedence", None)
     if precedence is None:
-        raise KeyError(f"Couldn't get precedence from {type(obj)}")
+        return 0  # raise KeyError(f"Couldn't get precedence from {type(obj)}")
     return precedence
 
 

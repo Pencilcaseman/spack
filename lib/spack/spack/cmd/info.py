@@ -30,6 +30,44 @@ header_color = "@*b"
 plain_format = "@."
 
 
+class Formatter:
+    """Generic formatter for elements displayed by `spack info`.
+
+    Elements have four parts: name, values, when condition, and description. They can
+    be formatted two ways (shown here for variants)::
+
+    Grouped by when (default)::
+
+        when +cuda
+          cuda_arch [none]                            none, 10, 100, 100a, 101,
+                                                      101a, 11, 12, 120, 120a, 13
+              CUDA architecture
+
+    Or, by name (each name has a when nested under it)::
+
+        cuda_arch [none]                              none, 10, 100, 100a, 101,
+                                                      101a, 11, 12, 120, 120a, 13
+          when +cuda
+            CUDA architecture
+
+    The values and description will be wrapped if needed. the name (and any additional info)
+    will not (so they should be kept short).
+
+    Subclasses are responsible for generating colorized text, but not wrapping,
+    indentation, or other formatting, for the name, values, and description.
+
+    """
+
+    def format_name(self, element) -> str:
+        return ""
+
+    def format_values(self, element) -> str:
+        return ""
+
+    def format_description(self, element) -> str:
+        return ""
+
+
 def padder(str_list, extra=0):
     """Return a function to pad elements of a list."""
     length = max(len(str(s)) for s in str_list) + extra
@@ -142,17 +180,19 @@ class VariantFormatter:
                     yield "    " + self.fmt % t
 
 
+class DependencyFormatter(Formatter):
+    def format_name(self, dep) -> str:
+        return dep.name
+
+    def format_values(self, dep) -> str:
+        return str(dt.flag_to_tuple(dep.depflag))
+
+
 def print_dependencies(pkg, args):
     """output build, link, and run package dependencies"""
 
-    for deptype in ("build", "link", "run"):
-        color.cprint("")
-        color.cprint(section_title("%s Dependencies:" % deptype.capitalize()))
-        deps = sorted(pkg.dependencies_of_type(dt.flag_from_string(deptype)))
-        if deps:
-            colify(deps, indent=4)
-        else:
-            color.cprint("    None")
+    print_fn = print_by_name if args.variants_by_name else print_grouped_by_when
+    print_fn("Dependencies", pkg.dependencies, DependencyFormatter())
 
 
 def print_detectable(pkg, args):
@@ -265,66 +305,70 @@ def print_tests(pkg, args):
         color.cprint("    None")
 
 
-def _fmt_value(v):
-    if v is None or isinstance(v, bool):
-        return str(v).lower()
-    else:
-        return str(v)
-
-
-def _fmt_name_and_default(variant):
-    """Print colorized name [default] for a variant."""
-    return color.colorize(f"@c{{{variant.name}}} @C{{[{_fmt_value(variant.default)}]}}")
-
-
 def _fmt_when(when: "spack.spec.Spec", indent: int):
     return color.colorize(f"{indent * ' '}@B{{when}} {color.cescape(str(when))}")
 
 
-def _fmt_variant_description(variant, width, indent):
-    """Format a variant's description, preserving explicit line breaks."""
-    return "\n".join(
-        textwrap.fill(
-            line, width=width, initial_indent=indent * " ", subsequent_indent=indent * " "
+def _fmt_variant_value(v):
+    return str(v).lower() if v is None or isinstance(v, bool) else str(v)
+
+
+class VariantFormatter(Formatter):
+    def format_name(self, variant) -> str:
+        return color.colorize(
+            f"@c{{{variant.name}}} @C{{[{_fmt_variant_value(variant.default)}]}}"
         )
-        for line in variant.description.split("\n")
-    )
+
+    def format_values(self, variant) -> str:
+        values = variant.values
+        if not isinstance(variant.values, (tuple, list, spack.variant.DisjointSetsOfValues)):
+            values = [variant.values]
+
+        # put 'none' first, sort the rest by value
+        sorted_values = sorted(values, key=lambda v: (v != "none", v))
+
+        return color.colorize(f"@c{{{', '.join(_fmt_variant_value(v) for v in sorted_values)}}}")
+
+    def format_description(self, variant) -> str:
+        return variant.description
 
 
-def _fmt_variant(variant, max_name_default_len, indent, when=None, out=None):
+def _fmt_definition(
+    name_field, values_field, description, max_name_len, indent, when=None, out=None
+):
+    """Format a definition entry in `spack info` output.
+
+    Arguments:
+        name_field: name and optional info, e.g. a default; should be short.
+        values_field: possible values for the entry; Wrapped if long.
+        description: description of the field (wrapped if overly long)
+        indent: size of leading indent for entry
+        when: optional when condition
+        out: stream to print to
+    """
     out = out or sys.stdout
 
     _, cols = tty.terminal_size()
 
-    name_and_default = _fmt_name_and_default(variant)
-    name_default_len = color.clen(name_and_default)
+    name_len = color.clen(name_field)
 
-    values = variant.values
-    if not isinstance(variant.values, (tuple, list, spack.variant.DisjointSetsOfValues)):
-        values = [variant.values]
+    pad = 4  # min padding between name and values
+    value_indent = (indent + max_name_len + pad) * " "  # left edge of values
 
-    # put 'none' first, sort the rest by value
-    sorted_values = sorted(values, key=lambda v: (v != "none", v))
-
-    pad = 4  # min padding between 'name [default]' and values
-    value_indent = (indent + max_name_default_len + pad) * " "  # left edge of values
-
-    # This preserves any formatting (i.e., newlines) from how the description was
-    # written in package.py, but still wraps long lines for small terminals.
-    # This allows some packages to provide detailed help on their variants (see, e.g., gasnet).
-    formatted_values = "\n".join(
-        textwrap.wrap(
-            f"{', '.join(_fmt_value(v) for v in sorted_values)}",
-            width=cols - 2,
-            initial_indent=value_indent,
-            subsequent_indent=value_indent,
+    if values_field:
+        formatted_values = "\n".join(
+            textwrap.wrap(
+                values_field,
+                width=cols - 2,
+                initial_indent=value_indent,
+                subsequent_indent=value_indent,
+            )
         )
-    )
-    formatted_values = formatted_values[indent + name_default_len + pad :]
+        # trim initial indentation
+        formatted_values = formatted_values[indent + name_len + pad :]
 
-    # name [default]   value1, value2, value3, ...
-    padding = pad * " "
-    color.cprint(f"{indent * ' '}{name_and_default}{padding}@c{{{formatted_values}}}", stream=out)
+        # name [default]   value1, value2, value3, ...
+        out.write(f"{indent * ' '}{name_field}{pad * ' '}{formatted_values}\n")
 
     # when <spec>
     description_indent = indent + 4
@@ -332,59 +376,65 @@ def _fmt_variant(variant, max_name_default_len, indent, when=None, out=None):
         out.write(_fmt_when(when, description_indent - 2))
         out.write("\n")
 
-    # description, preserving explicit line breaks from the way it's written in the package file
-    out.write(_fmt_variant_description(variant, cols - 2, description_indent))
-    out.write("\n")
-
-
-def _print_variants_header(pkg):
-    """output variants"""
-
-    color.cprint("")
-    color.cprint(section_title("Variants:"))
-
-    if not pkg.variants:
-        print("    None")
-        return
-
-    # Calculate the max length of the "name [default]" part of the variant display
-    # This lets us know where to print variant values.
-    max_name_default_len = max(
-        color.clen(_fmt_name_and_default(variant))
-        for name in pkg.variant_names()
-        for _, variant in pkg.variant_definitions(name)
-    )
-
-    return max_name_default_len
+    # description, preserving explicit line breaks from the way it's written in the
+    # package file, but still wrapoing long lines for small terminals. This allows
+    # descriptions to provide detailed help in descriptions (see, e.g., gasnet's variants).
+    if description:
+        formatted_description = "\n".join(
+            textwrap.fill(
+                line,
+                width=cols - 2,
+                initial_indent=description_indent * " ",
+                subsequent_indent=description_indent * " ",
+            )
+            for line in description.split("\n")
+        )
+        out.write(formatted_description)
+        out.write("\n")
 
 
 K = TypeVar("K", bound=SupportsRichComparison)
 V = TypeVar("V")
 
 
-def print_grouped_by_when(
-    header: str, when_indexed_dictionary: Dict, fmt_first_field: Callable, fmt_definition: Callable
-):
-    """Generic method to print metadata grouped by when conditions."""
-
+def print_header(header: str, when_indexed_dictionary: Dict, formatter: Formatter):
     color.cprint("")
     color.cprint(section_title(f"{header}:"))
 
     if not when_indexed_dictionary:
         print("    None")
+
+
+def max_name_length(when_indexed_dictionary: Dict, formatter: Formatter) -> int:
+    # Calculate the max length of the first field of the definition. Lets us know how
+    # much to pad other fields on the first line.
+    return max(
+        color.clen(formatter.format_name(definition))
+        for subkey in spack.package_base._subkeys(when_indexed_dictionary)
+        for _, definition in spack.package_base._definitions(when_indexed_dictionary, subkey)
+    )
+
+
+def print_grouped_by_when(header: str, when_indexed_dictionary: Dict, formatter: Formatter):
+    """Generic method to print metadata grouped by when conditions."""
+
+    print_header(header, when_indexed_dictionary, formatter)
+    if not when_indexed_dictionary:
         return
+
+    max_name_len = max_name_length(when_indexed_dictionary, formatter)
 
     # Calculate the max length of the first field of the definition. Lets us know how
     # much to pad other fields on the first line.
-    max_first_field_len = max(
-        color.clen(fmt_first_field(definition))
+    max_name_len = max(
+        color.clen(formatter.format_name(definition))
         for subkey in spack.package_base._subkeys(when_indexed_dictionary)
         for _, definition in spack.package_base._definitions(when_indexed_dictionary, subkey)
     )
 
     indent = 4
     for when, by_name in when_indexed_dictionary.items():
-        padded_values = max_first_field_len + 4
+        padded_values = max_name_len + 4
         start_indent = indent
 
         if when != spack.spec.Spec():
@@ -397,30 +447,45 @@ def print_grouped_by_when(
             start_indent += 2
 
         for subkey, definition in sorted(by_name.items()):
-            fmt_definition(definition, padded_values, start_indent, when=None, out=sys.stdout)
+            _fmt_definition(
+                formatter.format_name(definition),
+                formatter.format_values(definition),
+                formatter.format_description(definition),
+                max_name_len,
+                start_indent,
+                when=None,
+                out=sys.stdout,
+            )
 
 
-def print_variants_grouped_by_when(pkg):
-    print_grouped_by_when("Variants", pkg.variants, _fmt_name_and_default, _fmt_variant)
+def print_by_name(header: str, when_indexed_dictionary: Dict, formatter: Formatter):
+    print_header(header, when_indexed_dictionary, formatter)
+    if not when_indexed_dictionary:
+        return
 
-
-def print_variants_by_name(pkg):
-    max_name_default_len = _print_variants_header(pkg)
-    max_name_default_len += 4
+    max_name_len = max_name_length(when_indexed_dictionary, formatter)
+    max_name_len += 4
 
     indent = 4
-    for name in pkg.variant_names():
-        for when, variant in pkg.variant_definitions(name):
-            _fmt_variant(variant, max_name_default_len, indent, when, out=sys.stdout)
+
+    for subkey in spack.package_base._subkeys(when_indexed_dictionary):
+        for when, definition in spack.package_base._definitions(when_indexed_dictionary, subkey):
+            _fmt_definition(
+                formatter.format_name(definition),
+                formatter.format_values(definition),
+                formatter.format_description(definition),
+                max_name_len,
+                indent,
+                when=when,
+                out=sys.stdout,
+            )
             sys.stdout.write("\n")
 
 
 def print_variants(pkg, args):
     """output variants"""
-    if args.variants_by_name:
-        print_variants_by_name(pkg)
-    else:
-        print_variants_grouped_by_when(pkg)
+    print_fn = print_by_name if args.variants_by_name else print_grouped_by_when
+    print_fn("Variants", pkg.variants, VariantFormatter())
 
 
 def print_versions(pkg, args):
