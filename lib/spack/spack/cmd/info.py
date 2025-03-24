@@ -182,7 +182,7 @@ class VariantFormatter:
 
 class DependencyFormatter(Formatter):
     def format_name(self, dep) -> str:
-        return dep.name
+        return str(dep.spec)
 
     def format_values(self, dep) -> str:
         return str(dt.flag_to_tuple(dep.depflag))
