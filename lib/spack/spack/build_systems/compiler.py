@@ -199,9 +199,20 @@ class CompilerPackage(spack.package_base.PackageBase):
             return self.spec.extra_attributes["compilers"].get("cxx", None)
         return self._cxx_path()
 
+    @property
+    def hip(self) -> Optional[str]:
+        assert self.spec.concrete, "cannot retrieve HIP compiler, spec is not concrete"
+        if self.spec.external:
+            return self.spec.extra_attributes["compilers"].get("hip", None)
+        return self._hip_path()
+
     def _cxx_path(self) -> Optional[str]:
         """Returns the path to the C++ compiler, if the package was installed by Spack"""
         return None
+
+    def _hip_path(self) -> Optional[str]:
+        """Returns the path to the HIP compiler, if the package was installed by Spack"""
+        return self._cxx_path()
 
     @property
     def fortran(self):

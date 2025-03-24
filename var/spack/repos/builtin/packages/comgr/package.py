@@ -68,7 +68,7 @@ class Comgr(CMakePackage):
     depends_on("zlib-api", type="link")
     depends_on("z3", type="link")
     depends_on("ncurses", type="link")
-    requires(f"%[virtuals=c,cxx] llvm-amdgpu")
+    requires("%[virtuals=c,cxx] llvm-amdgpu")
 
     for ver in [
         "5.3.0",

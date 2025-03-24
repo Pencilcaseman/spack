@@ -23,6 +23,7 @@ class LlvmAmdgpu(CMakePackage, LlvmDetection, CompilerPackage):
         "c": "rocmcc/amdclang",
         "cxx": "rocmcc/amdclang++",
         "fortran": "rocmcc/amdflang",
+        "hip-lang": "rocmcc/amdclang++",
     }
 
     stdcxx_libs = ("-lstdc++",)

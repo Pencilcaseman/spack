@@ -57,7 +57,7 @@ class HipifyClang(CMakePackage):
     depends_on("cxx", type="build")
 
     depends_on("cmake@3.5:", type="build")
-    requires(f"%[virtuals=c,cxx] llvm-amdgpu")
+    requires("%[virtuals=c,cxx] llvm-amdgpu")
 
     for ver in [
         "5.3.0",

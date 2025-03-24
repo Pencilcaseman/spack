@@ -156,6 +156,9 @@ class CompilerWrapper(Package):
             _var_list.append(("fortran", "fortran", "F77", "SPACK_F77"))
             _var_list.append(("fortran", "fortran", "FC", "SPACK_FC"))
 
+        if dependent_spec.has_virtual_dependency("hip-lang"):
+            _var_list.append(("hip-lang", "hip", "HIPCXX", "SPACK_HIPCXX"))
+
         # The package is not used as a compiler, so skip this setup
         if not _var_list:
             return
