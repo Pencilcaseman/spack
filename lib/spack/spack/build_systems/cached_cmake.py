@@ -189,14 +189,18 @@ class CachedCMakeBuilder(CMakeBuilder):
 
     def get_scheduler(self) -> Optional[Scheduler]:
         spec = self.pkg.spec
+
+        # Check for Spectrum-mpi, which always uses LSF or LSF MPI variant
         if spec.satisfies("^spectrum-mpi") or spec["mpi"].satisfies("schedulers=lsf"):
             return self.Scheduler.LSF
 
+        # Check for Slurm MPI variants
         slurm_checks = ["+slurm", "schedulers=slurm", "process_managers=slurm"]
         if any(spec["mpi"].satisfies(variant) for variant in slurm_checks):
             return self.Scheduler.SLURM
 
         # TODO improve this when MPI implementations support flux
+        # Do this check last to avoid using a flux wrapper present next to Slurm/ LSF schedulers
         if which_string("flux") is not None:
             return self.Scheduler.FLUX
 
