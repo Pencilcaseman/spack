@@ -11,9 +11,9 @@ import llnl.util.filesystem as fs
 import llnl.util.tty as tty
 
 import spack.phase_callbacks
+import spack.spec
 import spack.util.prefix
 from spack.directives import depends_on
-from spack.spec import Spec
 from spack.util.executable import which_string
 
 from .cmake import CMakeBuilder, CMakePackage
@@ -377,7 +377,7 @@ class CachedCMakeBuilder(CMakeBuilder):
         return []
 
     def initconfig(
-        self, pkg: "CachedCMakePackage", spec: Spec, prefix: spack.util.prefix.Prefix
+        self, pkg: "CachedCMakePackage", spec: spack.spec.Spec, prefix: spack.util.prefix.Prefix
     ) -> None:
         cache_entries = (
             self.std_initconfig_entries()
