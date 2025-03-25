@@ -1682,10 +1682,11 @@ opt_criterion(45, "preferred providers (non-roots)").
 #minimize{ 0@245: #true }.
 #minimize{ 0@45: #true }.
 #minimize{
-    Weight@45+Priority,ProviderNode,Virtual
-    : provider_weight(ProviderNode, Virtual, Weight),
-      not attr("root", ProviderNode),
-      build_priority(ProviderNode, Priority)
+    Weight@45+Priority,X,Provider,Virtual
+    : provider_weight(node(X, Provider), Virtual, Weight),
+      not attr("root", node(X, Provider)),
+      build_priority(node(X, Provider), Priority),
+      not runtime(Provider)
 }.
 
 % Try to minimize the number of compiler mismatches in the DAG.
