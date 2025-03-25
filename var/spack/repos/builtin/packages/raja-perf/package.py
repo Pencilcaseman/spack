@@ -102,7 +102,7 @@ class RajaPerf(CachedCMakePackage, CudaPackage, ROCmPackage):
     variant(
         "lowopttest",
         default=False,
-        description="Intended for developers to use low optimization level for tests to pass with some compilers."
+        description="Intended for developers to use low optimization level for tests to pass with some compilers.",
     )
 
     depends_on("blt")
