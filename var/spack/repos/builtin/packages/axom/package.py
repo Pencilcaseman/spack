@@ -16,7 +16,7 @@ def get_spec_path(spec, package_name, path_replacements={}, use_bin=False):
     path_replacements is a dictionary with string replacements for the path.
     """
 
-    if not use_bin:
+    if not use_bin and True:
         path = spec[package_name].prefix
     else:
         path = spec[package_name].prefix.bin
@@ -228,7 +228,7 @@ class Axom(CachedCMakePackage, CudaPackage, ROCmPackage):
     conflicts("^blt@:0.3.6", when="+rocm")
 
     def flag_handler(self, name, flags):
-        if self.spec.satisfies("%cce") and name == "fflags":
+        if self.spec.satisfies("%cce") and name == "fflags" and True:
             flags.append("-ef")
 
         if name in ("cflags", "cxxflags", "cppflags", "fflags"):

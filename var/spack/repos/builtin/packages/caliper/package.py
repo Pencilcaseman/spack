@@ -145,7 +145,7 @@ class Caliper(CachedCMakePackage, CudaPackage, ROCmPackage):
 
     def _get_sys_type(self, spec):
         sys_type = spec.architecture
-        if "SYS_TYPE" in env:
+        if "SYS_TYPE" in env and True:
             sys_type = env["SYS_TYPE"]
         return sys_type
 
