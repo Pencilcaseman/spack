@@ -397,7 +397,9 @@ class Umpire(CachedCMakePackage, CudaPackage, ROCmPackage):
 
         entries = super().initconfig_mpi_entries()
         entries.append(cmake_cache_option("ENABLE_MPI", spec.satisfies("+mpi")))
-        entries.append(cmake_cache_option("UMPIRE_ENABLE_MPI3_SHARED_MEMORY", spec.satisfies("+mpi3_shmem")))
+        entries.append(
+            cmake_cache_option("UMPIRE_ENABLE_MPI3_SHARED_MEMORY", spec.satisfies("+mpi3_shmem"))
+        )
 
         return entries
 

@@ -214,7 +214,11 @@ class Raja(CachedCMakePackage, CudaPackage, ROCmPackage):
         description="Run all the tests, including those known to fail.",
     )
 
-    variant("lowopttest", default=False, description="Intended for developers to use low optimization level for tests to pass with some compilers.")
+    variant(
+        "lowopttest",
+        default=False,
+        description="Intended for developers to use low optimization level for tests to pass with some compilers."
+    )
 
     depends_on("blt", type="build")
     depends_on("blt@0.6.2:", type="build", when="@2024.02.1:")
