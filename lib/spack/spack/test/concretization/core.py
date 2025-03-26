@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import copy
 import os
+import pathlib
 import sys
 
 import jinja2
-import pathlib
 import pytest
 
 import archspec.cpu
@@ -23,6 +23,7 @@ import spack.deptypes as dt
 import spack.detection
 import spack.error
 import spack.hash_types as ht
+import spack.package_base
 import spack.paths
 import spack.platforms
 import spack.platforms.test
@@ -2732,7 +2733,7 @@ class TestConcretize:
         s = spack.concretize.concretize_one(f"git-ref-package commit={'a' * 40}")
         assert s.satisfies("@main")
 
-        #gmake should fail, only has sha256
+        # gmake should fail, only has sha256
         with pytest.raises(spack.error.UnsatisfiableSpecError) as e:
             s = spack.concretize.concretize_one(f"gmake commit={'a' * 40}")
             assert "Cannot use commit variant with" in e.value.message
@@ -3282,6 +3283,43 @@ def test_spec_unification(unify, mutable_config, mock_packages):
     maybe_fails = pytest.raises if unify is True else llnl.util.lang.nullcontext
     with maybe_fails(spack.solver.asp.UnsatisfiableSpecError):
         _ = spack.cmd.parse_specs([a_restricted, b], concretize=True)
+
+
+@pytest.mark.usefixtures("mutable_config", "mock_packages", "do_not_check_runtimes_on_reuse")
+@pytest.mark.parametrize(
+    "spec_str, error_type",
+    [
+        # TODO write actual Exceptions for these to give good error messages
+        (f"git-ref-package@main commit={'a' * 40}", None),
+        (f"git-ref-package@main commit={'a' * 39}", AssertionError),
+        (f"git-ref-package@2.1.6 commit={'a' * 40}", spack.error.UnsatisfiableSpecError),
+        (f"git-ref-package@git.2.1.6=2.1.6 commit={'a' * 40}", None),
+        # TODO(psakiev): need to monkeypatch git so this case doesn't query the web
+        # (f"git-ref-package@git.2.1.6 commit={'a' * 40}", None),
+    ],
+)
+def test_spec_containing_commit_variant(spec_str, error_type):
+    spec = spack.spec.Spec(spec_str)
+    if error_type is None:
+        spack.concretize.concretize_one(spec)
+    else:
+        with pytest.raises(error_type):
+            spack.concretize.concretize_one(spec)
+
+
+@pytest.mark.usefixtures("mutable_config", "mock_packages", "do_not_check_runtimes_on_reuse")
+@pytest.mark.parametrize("version_str", [f"git.{'a' * 40}=main", "git.2.1.5=main"])
+def test_relationship_git_versions_and_commit_variant(version_str):
+    """
+    Confirm that GitVersions auto assign and poopulate the commit variant correctly
+    """
+    # This should be a short lived test and can be deleted when we remove GitVersions
+    spec = spack.spec.Spec(f"git-ref-package@{version_str}")
+    spec = spack.concretize.concretize_one(spec)
+    if spec.version.commit_sha:
+        assert spec.version.commit_sha == spec.variants["commit"].value
+    else:
+        assert "commit" not in spec.variants
 
 
 def test_concretization_cache_roundtrip(use_concretization_cache, monkeypatch, mutable_config):

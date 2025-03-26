@@ -5,16 +5,17 @@
 import argparse
 import json
 import os
+import pathlib
 import sys
 from textwrap import dedent
 
-import pathlib
 import pytest
 
 import spack.cmd as cmd
 import spack.cmd.find
 import spack.concretize
 import spack.environment as ev
+import spack.package_base
 import spack.repo
 import spack.store
 import spack.user_environment as uenv
@@ -621,9 +622,9 @@ def test_phil_add_find_based_on_commit_sha(mock_git_version_info, monkeypatch):
     file_url = pathlib.Path(repo_path).as_uri()
 
     monkeypatch.setattr(spack.package_base.PackageBase, "git", file_url, raising=False)
-    
+
     env("create", "test")
-    with ev.read("test") as e:
+    with ev.read("test"):
         install("--fake", "--add", f"git-test-commit commit={commits[0]}")
 
         output = find(f"commit={commits[0]}")

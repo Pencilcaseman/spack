@@ -1522,7 +1522,9 @@ class SpackSolverSetup:
         self.assumptions: List[Tuple["clingo.Symbol", bool]] = []  # type: ignore[name-defined]
         self.declared_versions: Dict[str, List[DeclaredVersion]] = collections.defaultdict(list)
         self.possible_versions: Dict[str, Set[GitOrStandardVersion]] = collections.defaultdict(set)
-        self.git_commit_versions: Dict[str, Set[GitOrStandardVersion]] = collections.defaultdict(set)
+        self.git_commit_versions: Dict[str, Set[GitOrStandardVersion]] = collections.defaultdict(
+            set
+        )
         self.deprecated_versions: Dict[str, Set[GitOrStandardVersion]] = collections.defaultdict(
             set
         )
@@ -3125,7 +3127,7 @@ class SpackSolverSetup:
         specs = tuple(specs)  # ensure compatible types to add
 
         self.gen.h1("Reusable concrete specs")
-        #TODO(psakiev) need fact spec has commit
+        # TODO(psakiev) need fact spec has commit
         self.define_concrete_input_specs(specs, self.pkgs)
         if reuse:
             self.gen.fact(fn.optimize_for_reuse())
@@ -4208,7 +4210,9 @@ def _specs_with_commits(spec):
     if not (has_commit_var or has_git_version):
         return
     # StandardVersions paired to git branches or tags and GitVersions
-    assert spec.package.needs_commit(spec.version), f"{spec.name}@{spec.version} can not have a commit variant"
+    assert spec.package.needs_commit(
+        spec.version
+    ), f"{spec.name}@{spec.version} can not have a commit variant"
 
     # Specs with commit variants
     # - variant value satsifies commit regex
