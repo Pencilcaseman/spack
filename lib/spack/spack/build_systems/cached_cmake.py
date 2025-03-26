@@ -285,7 +285,6 @@ class CachedCMakeBuilder(CMakeBuilder):
             if archs[0] != "none":
                 arch_str = ";".join(archs)
                 entries.append(cmake_cache_string("CMAKE_HIP_ARCHITECTURES", arch_str))
-                entries.append(cmake_cache_string("GPU_TARGETS", arch_str))
 
             llvm_prefix = spec["llvm-amdgpu"].prefix
             llvm_bin = spec["llvm-amdgpu"].prefix.bin
@@ -304,6 +303,7 @@ class CachedCMakeBuilder(CMakeBuilder):
                 if archs[0] != "none":
                     arch_str = ";".join(archs)
                     entries.append(cmake_cache_string("AMDGPU_TARGETS", arch_str))
+                    entries.append(cmake_cache_string("GPU_TARGETS", arch_str))
 
             if spec.satisfies("%gcc"):
                 entries.append(
