@@ -336,6 +336,7 @@ attr("node_version_satisfies", node(ID, Package), Constraint)
      pkg_fact(Package, version_satisfies(Constraint, Version)).
 
 % Specs with a commit variant can't use versions that don't need commits
+error(10, "Cannot use commit variant with '{0}@{1}'", Package, Version)
   :- attr("version", node(ID, Package), Version),
      not pkg_fact(Package, version_needs_commit(Version)),
      attr("variant_value", node(ID, Package), "commit", _).

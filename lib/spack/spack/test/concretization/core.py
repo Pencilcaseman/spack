@@ -2730,11 +2730,12 @@ class TestConcretize:
 
     def test_phil_add_git_based_version_must_exist_to_use_ref(self):
         s = spack.concretize.concretize_one(f"git-ref-package commit={'a' * 40}")
-        assert s.satisifes("@main")
+        assert s.satisfies("@main")
 
         #gmake should fail, only has sha256
-        with pytest.raises(AssertionError):
-            s = spack.concretize.concretize_one(f"gmake={'a' * 40}")
+        with pytest.raises(spack.error.UnsatisfiableSpecError) as e:
+            s = spack.concretize.concretize_one(f"gmake commit={'a' * 40}")
+            assert "Cannot use commit variant with" in e.value.message
 
 
 @pytest.mark.usefixtures("mutable_config", "mock_packages", "do_not_check_runtimes_on_reuse")
