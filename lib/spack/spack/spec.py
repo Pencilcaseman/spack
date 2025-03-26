@@ -5157,11 +5157,11 @@ class DagCountVisitor:
         self.depflag: int = depflag
         self.number: int = 0
 
-    def accept(self, item: traverse.EdgeAndDepth) -> bool:
+    def accept(self, item: spack.traverse.EdgeAndDepth) -> bool:
         self.number += 1
         return True
 
-    def neighbors(self, item: traverse.EdgeAndDepth):
+    def neighbors(self, item: spack.traverse.EdgeAndDepth):
         return item.edge.spec.edges_to_dependencies(depflag=self.depflag)
 
 
