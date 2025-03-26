@@ -338,7 +338,7 @@ attr("node_version_satisfies", node(ID, Package), Constraint)
 % Specs with a commit variant can't use versions that don't need commits
   :- attr("version", node(ID, Package), Version),
      not pkg_fact(Package, version_needs_commit(Version)),
-     attr("variant_value", PackageNode, "commit", _).
+     attr("variant_value", node(ID, Package), "commit", _).
 
 #defined version_satisfies/3.
 #defined deprecated_versions_not_allowed/0.
