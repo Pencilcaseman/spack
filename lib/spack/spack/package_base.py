@@ -1001,15 +1001,15 @@ class PackageBase(WindowsRPath, PackageViewMixin, metaclass=PackageMeta):
             raise PackageError(f"{attr} attribute not defined on {self.name}")
         return value
 
-    @property
-    def needs_commit(self) -> bool:
+    @classmethod
+    def needs_commit(cls, version) -> bool:
         """
         Method for checking if the package instance needs a commit sha to be found
         """
-        if isinstance(self.version, GitVersion):
+        if isinstance(version, GitVersion):
             return True
 
-        ver_attrs = self.versions.get(self.version)
+        ver_attrs = cls.versions.get(version)
         if ver_attrs:
             return bool(ver_attrs.get("tag") or ver_attrs.get("branch"))
 

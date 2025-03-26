@@ -1522,6 +1522,7 @@ class SpackSolverSetup:
         self.assumptions: List[Tuple["clingo.Symbol", bool]] = []  # type: ignore[name-defined]
         self.declared_versions: Dict[str, List[DeclaredVersion]] = collections.defaultdict(list)
         self.possible_versions: Dict[str, Set[GitOrStandardVersion]] = collections.defaultdict(set)
+        self.git_commit_versions: Dict[str, Set[GitOrStandardVersion]] = collections.defaultdict(set)
         self.deprecated_versions: Dict[str, Set[GitOrStandardVersion]] = collections.defaultdict(
             set
         )
@@ -1593,6 +1594,8 @@ class SpackSolverSetup:
                     ),
                 )
             )
+            if pkg.needs_commit(declared_version.version):
+                self.git_commit_versions[pkg.name].add(declared_version.version)
 
         # Declare deprecated versions for this package, if any
         deprecated = self.deprecated_versions[pkg.name]
@@ -2897,11 +2900,14 @@ class SpackSolverSetup:
 
     def define_version_constraints(self):
         """Define what version_satisfies(...) means in ASP logic."""
+        # TODO(psakiev)
         for pkg_name, versions in sorted(self.version_constraints):
             # generate facts for each package constraint and the version
             # that satisfies it
             for v in sorted(v for v in self.possible_versions[pkg_name] if v.satisfies(versions)):
                 self.gen.fact(fn.pkg_fact(pkg_name, fn.version_satisfies(versions, v)))
+                if v in self.git_commit_versions[pkg_name]:
+                    self.gen.fact(fn.pkg_fact(pkg_name, fn.version_needs_commit(v)))
 
             self.gen.newline()
 
@@ -4199,7 +4205,7 @@ def _specs_with_commits(spec):
     if not (has_commit_var or has_git_version):
         return
     # StandardVersions paired to git branches or tags and GitVersions
-    assert spec.package.needs_commit, f"{spec.name}@{spec.version} can not have a commit variant"
+    assert spec.package.needs_commit(spec.version), f"{spec.name}@{spec.version} can not have a commit variant"
 
     # Specs with commit variants
     # - variant value satsifies commit regex
