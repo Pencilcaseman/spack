@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+import os
+
 from spack.package import *
 
 
@@ -112,7 +114,7 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
 
         options.append(self.define_from_variant("ENABLE_HIP", "rocm"))
         if spec.satisfies("+rocm"):
-            rocm_root = dirname(spec["llvm-amdgpu"].prefix)
+            rocm_root = os.path.dirname(spec["llvm-amdgpu"].prefix)
             options.append("-DROCM_PATH={0}".format(rocm_root))
 
             # there is only one dir like this, but the version component is unknown
