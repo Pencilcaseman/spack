@@ -12,17 +12,6 @@ import spack.platforms
 import spack.version
 from spack.package import *
 
-FC_PATH: Dict[str, str] = dict()
-
-
-def get_latest_valid_fortran_pth():
-    """Assign maximum available fortran compiler version"""
-    # TODO (johnwparent): validate compatibility w/ try compiler
-    # functionality when added
-    sort_fn = lambda fc_ver: Version(fc_ver)
-    sort_fc_ver = sorted(list(FC_PATH.keys()), key=sort_fn)
-    return FC_PATH[sort_fc_ver[-1]] if sort_fc_ver else None
-
 
 class Msvc(Package, CompilerPackage):
     """
@@ -37,10 +26,9 @@ class Msvc(Package, CompilerPackage):
             "detected on a system where they are externally installed"
         )
 
-    compiler_languages = ["c", "cxx", "fortran"]
+    compiler_languages = ["c", "cxx"]
     c_names = ["cl"]
     cxx_names = ["cl"]
-    fortran_names = ["ifx", "ifort"]
 
     compiler_version_argument = ""
     compiler_version_regex = r"([1-9][0-9]*\.[0-9]*\.[0-9]*)"
@@ -50,7 +38,7 @@ class Msvc(Package, CompilerPackage):
     # based on proper versions of MSVC from there
     # pending acceptance of #28117 for full support using
     # compiler wrappers
-    compiler_wrapper_link_paths = {"c": "", "cxx": "", "fortran": ""}
+    compiler_wrapper_link_paths = {"c": "", "cxx": ""}
 
     provides("c", "cxx")
     requires("platform=windows", msg="MSVC is only supported on Windows")
@@ -59,7 +47,6 @@ class Msvc(Package, CompilerPackage):
     def determine_version(cls, exe):
         # MSVC compiler does not have a proper version argument
         # Errors out and prints version info with no args
-        is_ifx = "ifx.exe" in str(exe)
         match = re.search(
             cls.compiler_version_regex,
             spack.build_systems.compiler.compiler_output(
@@ -67,8 +54,6 @@ class Msvc(Package, CompilerPackage):
             ),
         )
         if match:
-            if is_ifx:
-                FC_PATH[match.group(1)] = str(exe)
             return match.group(1)
 
     @classmethod
@@ -76,18 +61,6 @@ class Msvc(Package, CompilerPackage):
         # MSVC uses same executable for both languages
         spec, extras = super().determine_variants(exes, version_str)
         extras["compilers"]["c"] = extras["compilers"]["cxx"]
-        # This depends on oneapi being processed before msvc
-        # which is guarunteed from detection behavior.
-        # Processing oneAPI tracks oneAPI installations within
-        # this module, which are then used to populate compatible
-        # MSVC version's fortran compiler spots
-
-        # TODO: remove this once #45189 lands
-        # TODO: interrogate intel and msvc for compatibility after
-        # #45189 lands
-        fortran_compiler = get_latest_valid_fortran_pth()
-        if fortran_compiler is not None:
-            extras["compilers"]["fortran"] = fortran_compiler
         return spec, extras
 
     def setup_dependent_build_environment(self, env, dependent_spec):
@@ -303,15 +276,3 @@ class VCVarsInvocation(VarsInvocation):
     def command_str(self):
         script = super(VCVarsInvocation, self).command_str()
         return f"{script} {self.arch} {self.sdk_ver} {self.vcvars_ver}"
-
-
-FC_PATH = {}
-
-
-def get_valid_fortran_pth():
-    """Assign maximum available fortran compiler version"""
-    # TODO (johnwparent): validate compatibility w/ try compiler
-    # functionality when added
-    sort_fn = lambda fc_ver: spack.version.Version(fc_ver)
-    sort_fc_ver = sorted(list(FC_PATH.keys()), key=sort_fn)
-    return FC_PATH[sort_fc_ver[-1]] if sort_fc_ver else None
