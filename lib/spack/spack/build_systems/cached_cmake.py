@@ -285,25 +285,11 @@ class CachedCMakeBuilder(CMakeBuilder):
             if archs[0] != "none":
                 arch_str = ";".join(archs)
                 entries.append(cmake_cache_string("CMAKE_HIP_ARCHITECTURES", arch_str))
-                entries.append(cmake_cache_string("GPU_TARGETS", arch_str))
 
-            llvm_prefix = spec["llvm-amdgpu"].prefix
             llvm_bin = spec["llvm-amdgpu"].prefix.bin
-            # Some ROCm systems seem to point to /<path>/rocm-<ver>/ and
-            # others point to /<path>/rocm-<ver>/llvm
-            if os.path.basename(os.path.normpath(llvm_prefix)) != "llvm":
-                llvm_bin = os.path.join(llvm_prefix, "llvm/bin/")
             entries.append(
                 cmake_cache_filepath("CMAKE_HIP_COMPILER", os.path.join(llvm_bin, "amdclang++"))
             )
-
-            if not spec.satisfies("^blt"):
-                # Explicitly setting HIP_ROOT_DIR may be a patch that is no longer necessary
-                entries.append(cmake_cache_path("HIP_ROOT_DIR", "{0}".format(spec["hip"].prefix)))
-
-                if archs[0] != "none":
-                    arch_str = ";".join(archs)
-                    entries.append(cmake_cache_string("AMDGPU_TARGETS", arch_str))
 
             if spec.satisfies("%gcc"):
                 entries.append(
@@ -311,6 +297,15 @@ class CachedCMakeBuilder(CMakeBuilder):
                         "CMAKE_HIP_FLAGS", f"--gcc-toolchain={self.pkg.compiler.prefix}"
                     )
                 )
+
+            # Extra definitions that might be required in other cases
+            if not spec.satisfies("^blt"):
+                entries.append(cmake_cache_path("HIP_ROOT_DIR", "{0}".format(spec["hip"].prefix)))
+
+                if archs[0] != "none":
+                    arch_str = ";".join(archs)
+                    entries.append(cmake_cache_string("AMDGPU_TARGETS", arch_str))
+                    entries.append(cmake_cache_string("GPU_TARGETS", arch_str))
 
         return entries
 
