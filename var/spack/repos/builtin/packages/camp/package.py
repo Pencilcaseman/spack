@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import os
-
 from spack.package import *
 
 
@@ -114,14 +112,7 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
 
         options.append(self.define_from_variant("ENABLE_HIP", "rocm"))
         if spec.satisfies("+rocm"):
-            rocm_root = os.path.dirname(spec["llvm-amdgpu"].prefix)
-            options.append("-DROCM_PATH={0}".format(rocm_root))
-
-            # there is only one dir like this, but the version component is unknown
-            options.append(
-                "-DHIP_CLANG_INCLUDE_PATH="
-                + glob.glob("{}/lib/clang/*/include".format(spec["llvm-amdgpu"].prefix))[0]
-            )
+            options.append("-DHIP_ROOT_DIR={0}".format(spec["hip"].prefix))
 
             archs = ";".join(self.spec.variants["amdgpu_target"].value)
             options.append("-DCMAKE_HIP_ARCHITECTURES={0}".format(archs))
