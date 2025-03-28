@@ -1305,7 +1305,7 @@ def test_print_install_test_log_failures(
 def test_specs_count(install_mockery, mock_packages):
     """Check SpecCounts DAG visitor total matches expected."""
     spec = spack.spec.Spec("mpileaks^mpich").concretized()
-    counter = inst.SpecsCount(dt.LINK | dt.RUN)
+    counter = inst.SpecsCount(dt.LINK | dt.RUN | dt.BUILD)
     number_specs = counter.total([spec])
 
     json = sjson.load(spec.to_json())
