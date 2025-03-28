@@ -198,7 +198,7 @@ class Chai(CachedCMakePackage, CudaPackage, ROCmPackage):
 
     def _get_sys_type(self, spec):
         sys_type = spec.architecture
-        if "SYS_TYPE" in env and True:
+        if "SYS_TYPE" in env:
             sys_type = env["SYS_TYPE"]
         return sys_type
 
