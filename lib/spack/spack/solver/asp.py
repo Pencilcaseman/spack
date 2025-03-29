@@ -2902,7 +2902,8 @@ class SpackSolverSetup:
 
     def define_version_constraints(self):
         """Define what version_satisfies(...) means in ASP logic."""
-        # TODO(psakiev)
+
+        # TODO(psakiev) could probably consolidate with loop below
         for pkg_name, versions in sorted(self.possible_versions.items()):
             for v in versions:
                 if v in self.git_commit_versions[pkg_name]:
@@ -4200,36 +4201,21 @@ class SpecBuilder:
 
 
 def _specs_with_commits(spec):
-    spec.package.resolve_binary_provenance()
-    # TODO(psakiev) assert commit is associated with ref
+    if not spec.package.needs_commit(spec.version):
+        return 
 
-    # method above is in charge of assigning the commit variant
-    has_commit_var = "commit" in spec.variants
-    has_git_version = isinstance(spec.version, vn.GitVersion)
-
-    if not (has_commit_var or has_git_version):
-        return
-    # StandardVersions paired to git branches or tags and GitVersions
-    assert spec.package.needs_commit(
-        spec.version
-    ), f"{spec.name}@{spec.version} can not have a commit variant"
-
-    # Specs with commit variants
-    # - variant value satsifies commit regex
-    # - paired to a GitVersion or version that is associated with a branch/tag
-    # - variant value should match GitVersion's commit value
-    if has_commit_var:
+    # check integrity of specified commit shas
+    if "commit" in spec.variants:
         invalid_commit_msg = (
             f"Internal Error: {spec.name}'s assigned commit {spec.variants['commit'].value}"
             " does not meet commit syntax requirements."
         )
-
         assert vn.is_git_commit_sha(spec.variants["commit"].value), invalid_commit_msg
 
-    # Specs with GitVersions
-    # - must have a commit variant, or add it here
-    # - must have a commit on the GitVersion (enforce after look up implemented)
-    if has_git_version:
+    spec.package.resolve_binary_provenance()
+    # TODO(psakiev) assert commit is associated with ref
+
+    if isinstance(spec.version, spack.version.GitVersion):
         if not spec.version.commit_sha:
             # TODO(psakiev) this will be a failure when commit look up is automated
             return
