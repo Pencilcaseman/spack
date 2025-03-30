@@ -3101,6 +3101,14 @@ class SpackSolverSetup:
             if node.namespace is not None:
                 self.explicitly_required_namespaces[node.name] = node.namespace
 
+        # abstract specs with commit variants are assigend version most likely to have commit sha
+        for spec in specs:
+            version = spec.versions.concrete_range_as_version
+            if not version:
+                version = max(spack.repo.PATH.get_pkg_class(spec.fullname).versions.keys())
+                spec.versions = spack.version.VersionList([version])
+
+
         self.gen = ProblemInstanceBuilder()
         compiler_parser = CompilerParser(configuration=spack.config.CONFIG).with_input_specs(specs)
 
@@ -3128,7 +3136,6 @@ class SpackSolverSetup:
         specs = tuple(specs)  # ensure compatible types to add
 
         self.gen.h1("Reusable concrete specs")
-        # TODO(psakiev) need fact spec has commit
         self.define_concrete_input_specs(specs, self.pkgs)
         if reuse:
             self.gen.fact(fn.optimize_for_reuse())
@@ -4219,7 +4226,8 @@ def _specs_with_commits(spec):
         if not spec.version.commit_sha:
             # TODO(psakiev) this will be a failure when commit look up is automated
             return
-        spec.variants["commit"] = vt.SingleValuedVariant("commit", spec.version.commit_sha)
+        if not "commit" in spec.variants:
+            spec.variants["commit"] = vt.SingleValuedVariant("commit", spec.version.commit_sha)
 
 
 def _inject_patches_variant(root: spack.spec.Spec) -> None:

@@ -2729,13 +2729,13 @@ class TestConcretize:
         assert s.satisfies("%clang")
         assert s.prefix == "/tmp/prefix2"
 
-    def test_phil_add_git_based_version_must_exist_to_use_ref(self):
+    def test_git_based_version_must_exist_to_use_ref(self):
         # gmake should fail, only has sha256
         with pytest.raises(spack.error.UnsatisfiableSpecError) as e:
             s = spack.concretize.concretize_one(f"gmake commit={'a' * 40}")
             assert "Cannot use commit variant with" in e.value.message
 
-    def test_phil_add_commit_variant_in_absence_of_version_selects_max_infinity_version(self):
+    def test_commit_variant_in_absence_of_version_selects_max_infinity_version(self):
         spec = spack.concretize.concretize_one(f"git-ref-package commit={'a' * 40}")
         assert spec.satisfies("@develop")
 
@@ -3277,12 +3277,35 @@ def test_spec_unification(unify, mutable_config, mock_packages):
         (f"git-ref-package@main commit={'a' * 39}", AssertionError),
         (f"git-ref-package@2.1.6 commit={'a' * 40}", spack.error.UnsatisfiableSpecError),
         (f"git-ref-package@git.2.1.6=2.1.6 commit={'a' * 40}", None),
-        # TODO(psakiev): need to monkeypatch git so this case doesn't query the web
-        # (f"git-ref-package@git.2.1.6 commit={'a' * 40}", None),
+        (f"git-ref-package@git.{'a' * 40}=2.1.6 commit={'a' * 40}", None),
     ],
 )
-def test_spec_containing_commit_variant(spec_str, error_type):
+def test_phil_spec_containing_commit_variant(spec_str, error_type):
     spec = spack.spec.Spec(spec_str)
+    if error_type is None:
+        spack.concretize.concretize_one(spec)
+    else:
+        with pytest.raises(error_type):
+            spack.concretize.concretize_one(spec)
+
+
+@pytest.mark.usefixtures("mutable_config", "mock_packages", "do_not_check_runtimes_on_reuse")
+@pytest.mark.parametrize(
+    "spec_str, error_type",
+    [
+        (f"git-test-commit@git.main commit={'a' * 40}", None),
+        (f"git-test-commit@git.v1.0 commit={'a' * 40}", None),
+        ("git-test-commit@{sha} commit={sha}", None),
+        ("git-test-commit@{sha} commit=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", None),
+    ],
+)
+def test_phil_spec_with_commit_interacts_with_lookup(mock_git_version_info, monkeypatch, spec_str, error_type):
+    # This test will be short lived. Technically we could do further checks with a Lookup
+    # but skipping impl since we are going to deprecate
+    repo_path, filename, commits = mock_git_version_info
+    file_url = pathlib.Path(repo_path).as_uri()
+    monkeypatch.setattr(spack.package_base.PackageBase, "git", file_url, raising=False)
+    spec = spack.spec.Spec(spec_str.format(sha = commits[-1]))
     if error_type is None:
         spack.concretize.concretize_one(spec)
     else:
