@@ -37,6 +37,7 @@ class GitRefPackage(AutotoolsPackage):
     variant("opt", default=True, description="Enable optimizations")
     variant("shared", default=True, description="Build shared library")
     variant("pic", default=True, description="Enable position-independent code (PIC)")
+    variant("surgical", default=True, when=f"commit={'b' * 40}", description="Testing conditional on commit")
 
     conflicts("+shared~pic")
 

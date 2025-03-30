@@ -333,3 +333,17 @@ def test_package_can_have_sparse_checkout_properties(mock_packages, mock_fetch, 
     assert isinstance(fetcher, spack.fetch_strategy.GitFetchStrategy)
     assert hasattr(fetcher, "git_sparse_paths")
     assert fetcher.git_sparse_paths == pkg_cls.git_sparse_paths
+
+
+def test_phil_package_can_depend_on_commit_of_dependency(mock_packages, config):
+    spec = spack.concretize.concretize_one(Spec("git-ref-commit-dep@1.0.0"))
+    assert spec.satisfies(f"^git-ref-package commit={'a' * 40}")
+    assert "surgical" not in spec["git-ref-package"].variants
+
+
+def test_phil_package_condtional_variants_may_depend_on_commit(mock_packages, config):
+    spec = spack.concretize.concretize_one(Spec("git-ref-commit-dep@develop"))
+    assert spec.satisfies(f"^git-ref-package commit={'b' * 40}")
+    conditional_variant = spec["git-ref-package"].variants.get("surgical", None)
+    assert conditional_variant
+    assert conditional_variant.value
