@@ -989,16 +989,17 @@ class PackageBase(WindowsRPath, PackageViewMixin, metaclass=PackageMeta):
         assert dev_path_var and record, "dev_path variant and record must be present"
         return fsys.recursive_mtime_greater_than(dev_path_var.value, record.installation_time)
 
-    def version_or_package_attr(self, attr, version, default=None):
+    @classmethod
+    def version_or_package_attr(cls, attr, version, default=None):
         """
         Get an attribute that could be on the version or package with preference to the version
         """
-        version_attrs = self.versions.get(version)
+        version_attrs = cls.versions.get(version)
         if version_attrs and attr in version_attrs:
             return version_attrs.get(attr)
-        value = getattr(self, attr, default)
+        value = getattr(cls, attr, default)
         if value is None:
-            raise PackageError(f"{attr} attribute not defined on {self.name}")
+            raise PackageError(f"{attr} attribute not defined on {cls.name}")
         return value
 
     @classmethod

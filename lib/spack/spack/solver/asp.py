@@ -1522,8 +1522,8 @@ class SpackSolverSetup:
         self.assumptions: List[Tuple["clingo.Symbol", bool]] = []  # type: ignore[name-defined]
         self.declared_versions: Dict[str, List[DeclaredVersion]] = collections.defaultdict(list)
         self.possible_versions: Dict[str, Set[GitOrStandardVersion]] = collections.defaultdict(set)
-        self.git_commit_versions: Dict[str, Set[GitOrStandardVersion]] = collections.defaultdict(
-            set
+        self.git_commit_versions: Dict[str, Dict[GitOrStandardVersion, str]] = (
+            collections.defaultdict(dict)
         )
         self.deprecated_versions: Dict[str, Set[GitOrStandardVersion]] = collections.defaultdict(
             set
@@ -1597,7 +1597,8 @@ class SpackSolverSetup:
                 )
             )
             if pkg.needs_commit(declared_version.version):
-                self.git_commit_versions[pkg.name].add(declared_version.version)
+                commit = pkg.version_or_package_attr("commit", declared_version.version, "")
+                self.git_commit_versions[pkg.name][declared_version.version] = commit
 
         # Declare deprecated versions for this package, if any
         deprecated = self.deprecated_versions[pkg.name]
@@ -2903,11 +2904,13 @@ class SpackSolverSetup:
     def define_version_constraints(self):
         """Define what version_satisfies(...) means in ASP logic."""
 
-        # TODO(psakiev) could probably consolidate with loop below
         for pkg_name, versions in sorted(self.possible_versions.items()):
             for v in versions:
                 if v in self.git_commit_versions[pkg_name]:
+                    sha = self.git_commit_versions[pkg_name].get(v)
                     self.gen.fact(fn.pkg_fact(pkg_name, fn.version_needs_commit(v)))
+                    if sha:
+                        self.gen.fact(fn.pkg_fact(pkg_name, fn.version_has_commit(v, sha)))
             self.gen.newline()
 
         for pkg_name, versions in sorted(self.version_constraints):
@@ -4226,7 +4229,7 @@ def _specs_with_commits(spec):
         if not spec.version.commit_sha:
             # TODO(psakiev) this will be a failure when commit look up is automated
             return
-        if not "commit" in spec.variants:
+        if "commit" not in spec.variants:
             spec.variants["commit"] = vt.SingleValuedVariant("commit", spec.version.commit_sha)
 
 

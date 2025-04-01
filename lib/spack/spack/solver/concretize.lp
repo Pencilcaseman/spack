@@ -257,8 +257,6 @@ pkg_fact(Package, version_declared(Version)) :- pkg_fact(Package, version_declar
 { attr("version", node(ID, Package), Version) : pkg_fact(Package, version_declared(Version)) }
  :- attr("node", node(ID, Package)).
 
-% TODO(psakiev) need rule if spec has commit version must need commit
-
 % A virtual package may or may not have a version, but never has more than one
 error(100, "Cannot select a single version for virtual '{0}'", Virtual)
   :- attr("virtual_node", node(ID, Virtual)),
@@ -340,6 +338,11 @@ error(10, "Cannot use commit variant with '{0}@{1}'", Package, Version)
   :- attr("version", node(ID, Package), Version),
      not pkg_fact(Package, version_needs_commit(Version)),
      attr("variant_value", node(ID, Package), "commit", _).
+
+% Versions with commits require a matching commit variant
+  :- attr("version", node(ID, Packate), Version),
+     pkg_fact(Package, version_has_commit(Version, Sha)),
+     not attr("variant_value", node(ID, Package), "commit", Sha).
 
 #defined version_satisfies/3.
 #defined deprecated_versions_not_allowed/0.

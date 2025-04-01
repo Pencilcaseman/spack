@@ -347,3 +347,8 @@ def test_phil_package_condtional_variants_may_depend_on_commit(mock_packages, co
     conditional_variant = spec["git-ref-package"].variants.get("surgical", None)
     assert conditional_variant
     assert conditional_variant.value
+
+
+def test_phil_commit_variant_finds_matches_for_commit_versions(mock_packages, config):
+    spec = spack.concretize.concretize_one(Spec(f"git-ref-commit-dep commit={'c' * 40}"))
+    assert spec.satisfies("^git-ref-package@stable")

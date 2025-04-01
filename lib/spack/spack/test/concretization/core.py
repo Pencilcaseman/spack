@@ -2732,7 +2732,7 @@ class TestConcretize:
     def test_git_based_version_must_exist_to_use_ref(self):
         # gmake should fail, only has sha256
         with pytest.raises(spack.error.UnsatisfiableSpecError) as e:
-            s = spack.concretize.concretize_one(f"gmake commit={'a' * 40}")
+            spack.concretize.concretize_one(f"gmake commit={'a' * 40}")
             assert "Cannot use commit variant with" in e.value.message
 
     def test_commit_variant_in_absence_of_version_selects_max_infinity_version(self):

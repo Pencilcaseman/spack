@@ -16,6 +16,7 @@ class GitRefPackage(AutotoolsPackage):
 
     version("develop", branch="develop")
     version("main", branch="main")
+    version("stable", tag="stable", commit="c" * 40)
     version("3.0.1", tag="v3.0.1")
     version("2.1.6", sha256="a5d504c0d52e2e2721e7e7d86988dec2e290d723ced2307145dedd06aeb6fef2")
     version("2.1.5", sha256="3f6576971397b379d4205ae5451ff5a68edf6c103b2f03c4188ed7075fbb5f04")
