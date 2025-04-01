@@ -3106,8 +3106,9 @@ class SpackSolverSetup:
 
         # abstract specs with commit variants are assigend version most likely to have commit sha
         for spec in specs:
+            commit = spec.variants.get("commit")
             version = spec.versions.concrete_range_as_version
-            if not version:
+            if not version and commit:
                 version = max(spack.repo.PATH.get_pkg_class(spec.fullname).versions.keys())
                 spec.versions = spack.version.VersionList([version])
 
