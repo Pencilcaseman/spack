@@ -56,6 +56,9 @@ class PyZfit(PythonPackage):
         depends_on("py-tensorflow")
         depends_on("py-tensorflow-probability +py-tensorflow")
 
+        depends_on("py-tensorflow@2.16.2:2.19", type=("run"), when="@0.25.0:")
+        depends_on("py-tensorflow-probability@0.25:0.26", type=("run"), when="@0.25.0:")
+        
         depends_on("py-tensorflow@2.16.2:2.18", type=("run"), when="@0.24.3:")
         depends_on("py-tensorflow@2.18", type=("run"), when="@0.24:0.24.2")
         depends_on("py-tensorflow-probability@0.25", type=("run"), when="@0.24:")
