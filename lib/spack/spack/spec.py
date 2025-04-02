@@ -1706,7 +1706,9 @@ class Spec:
             result[key] = list(group)
         return result
 
-    def _add_flag(self, name: str, value: str, propagate: bool, concrete: bool) -> None:
+    def _add_flag(
+        self, name: str, value: Union[str, bool], propagate: bool, concrete: bool
+    ) -> None:
         """Called by the parser to add a known flag"""
 
         if propagate and name in vt.RESERVED_NAMES:
@@ -1716,6 +1718,7 @@ class Spec:
 
         valid_flags = FlagMap.valid_compiler_flags()
         if name == "arch" or name == "architecture":
+            assert type(value) is str, "architecture have a string value"
             parts = tuple(value.split("-"))
             plat, os, tgt = parts if len(parts) == 3 else (None, None, value)
             self._set_architecture(platform=plat, os=os, target=tgt)
@@ -1729,17 +1732,15 @@ class Spec:
             self.namespace = value
         elif name in valid_flags:
             assert self.compiler_flags is not None
+            assert type(value) is str, f"{name} must have a string value"
             flags_and_propagation = spack.compilers.flags.tokenize_flags(value, propagate)
             flag_group = " ".join(x for (x, y) in flags_and_propagation)
             for flag, propagation in flags_and_propagation:
                 self.compiler_flags.add_flag(name, flag, propagation, flag_group)
         else:
-            if str(value).upper() == "TRUE" or str(value).upper() == "FALSE":
-                self.variants[name] = vt.BoolValuedVariant(name, value, propagate)
-            elif concrete:
-                self.variants[name] = vt.MultiValuedVariant(name, value, propagate)
-            else:
-                self.variants[name] = vt.VariantBase(name, value, propagate)
+            self.variants[name] = vt.VariantValue.from_string_or_bool(
+                name, value, propagate=propagate, concrete=concrete
+            )
 
     def _set_architecture(self, **kwargs):
         """Called by the parser to set the architecture."""
@@ -4489,7 +4490,7 @@ class VariantMap(lang.HashableMap):
 
     def __setitem__(self, name, vspec):
         # Raise a TypeError if vspec is not of the right type
-        if not isinstance(vspec, vt.VariantBase):
+        if not isinstance(vspec, vt.VariantValue):
             raise TypeError(
                 "VariantMap accepts only values of variant types "
                 f"[got {type(vspec).__name__} instead]"
@@ -4629,7 +4630,7 @@ class VariantMap(lang.HashableMap):
         bool_keys = []
         kv_keys = []
         for key in sorted_keys:
-            if isinstance(self[key].value, bool):
+            if self[key].type == vt.VariantType.BOOL:
                 bool_keys.append(key)
             else:
                 kv_keys.append(key)
@@ -4662,7 +4663,8 @@ def substitute_abstract_variants(spec: Spec):
     unknown = []
     for name, v in spec.variants.items():
         if name == "dev_path":
-            spec.variants.substitute(vt.SingleValuedVariant(name, v._original_value))
+            v.type = vt.VariantType.SINGLE
+            v.concrete = True
             continue
         elif name in vt.RESERVED_NAMES:
             continue
@@ -4685,7 +4687,7 @@ def substitute_abstract_variants(spec: Spec):
         if rest:
             continue
 
-        new_variant = pkg_variant.make_variant(v._original_value)
+        new_variant = pkg_variant.make_variant(*v.values)
         pkg_variant.validate_or_raise(new_variant, spec.name)
         spec.variants.substitute(new_variant)
 
@@ -4811,7 +4813,7 @@ class SpecfileReaderBase:
                 for val in values:
                     spec.compiler_flags.add_flag(name, val, propagate)
             else:
-                spec.variants[name] = vt.MultiValuedVariant.from_node_dict(
+                spec.variants[name] = vt.VariantValue.from_node_dict(
                     name, values, propagate=propagate, abstract=name in abstract_variants
                 )
 
@@ -4837,7 +4839,7 @@ class SpecfileReaderBase:
             patches = node["patches"]
             if len(patches) > 0:
                 mvar = spec.variants.setdefault("patches", vt.MultiValuedVariant("patches", ()))
-                mvar.value = patches
+                mvar.set(*patches)
                 # FIXME: Monkey patches mvar to store patches order
                 mvar._patches_in_order_of_appearance = patches
 
