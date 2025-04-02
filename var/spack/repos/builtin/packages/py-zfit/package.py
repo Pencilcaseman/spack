@@ -19,6 +19,7 @@ class PyZfit(PythonPackage):
 
     tags = ["likelihood", "statistics", "inference", "fitting", "hep"]
 
+	version("0.25.0", sha256="ac5a92bc284094eae55dd9afe1fe2c8f3f67a402dfc7a8ad6087a9ea29ff2b41")
     version("0.24.3", sha256="0efe47a5c597f7c730ac25495625f8bb4460f2fa4a0f4c387f503339ac8e91b5")
     version("0.24.2", sha256="6b83315e16e07d8472d92b142b377d8d7314411d27fe8033168037fd4583f5f6")
     version("0.24.1", sha256="9a0423302ac5647e910feadce634b8b0a1806c1866f4f55795db64918cbdd2d8")
