@@ -49,6 +49,12 @@ class Mfem(Package, CudaPackage, ROCmPackage):
     # other version.
     version("develop", branch="master")
 
+    # FIXME: update this when v4.8 is released
+    version(
+        "4.8.0-dev",
+        branch="mfem-4.8-dev",
+    )
+
     version(
         "4.7.0",
         sha256="5e889493f5f79848f7b2d16afaae307c59880ac2a7ff2315551c60ca54717751",
@@ -282,7 +288,7 @@ class Mfem(Package, CudaPackage, ROCmPackage):
 
     depends_on("mpi", when="+mpi")
     depends_on("hipsparse", when="@4.4.0:+rocm")
-    depends_on("hipblas", when="@4.4.0:+rocm")
+    depends_on("hipblas", when="@4.8.0:+rocm")
 
     with when("+mpi"):
         depends_on("hypre")
@@ -987,7 +993,8 @@ class Mfem(Package, CudaPackage, ROCmPackage):
             if "^rocprim" in spec and not spec["hip"].external:
                 # rocthrust [via petsc+rocm] has a dependency on rocprim
                 hip_headers += spec["rocprim"].headers
-            if "^hipblas" in spec:
+            if "^hipblas" in spec:  # hipblas is needed @4.8.0:+rocm
+                # note: superlu-dist+rocm needs the hipblas header path too
                 hipblas = spec["hipblas"]
                 hip_headers += hipblas.headers
                 hip_libs += hipblas.libs
@@ -1013,6 +1020,13 @@ class Mfem(Package, CudaPackage, ROCmPackage):
                 hip_libs += find_libraries(craylibs, craylibs_path)
                 craylibs_path2 = join_path(craylibs_path, "../../../cce-clang", proc, "lib")
                 hip_libs += find_libraries("libunwind", craylibs_path2)
+            elif spec.satisfies("%rocmcc ^cray-mpich"):
+                # The AMD version of cray-mpich, libmpi_amd.so, needs the rpath
+                # to libflang.so (also needed for libpgmath.so and others).
+                rocmcc_bin_dir = os.path.dirname(env["SPACK_CXX"])
+                rocmcc_prefix = os.path.dirname(rocmcc_bin_dir)
+                rocmcc_libflang = find_libraries("libflang", rocmcc_prefix, recursive=True)
+                hip_libs += rocmcc_libflang
 
             if hip_headers:
                 options += ["HIP_OPT=%s" % hip_headers.cpp_flags]
