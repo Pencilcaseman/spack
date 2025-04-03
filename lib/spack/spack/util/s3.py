@@ -113,6 +113,13 @@ def get_mirror_s3_connection_info(mirror, method):
     if endpoint_url:
         s3_client_args["endpoint_url"] = _parse_s3_endpoint_url(endpoint_url)
 
+    from pprint import pprint
+    print('s3_connection')
+    pprint(s3_connection)
+    print()
+    print('s3_client_args')
+    pprint(s3_client_args)
+
     return s3_connection, s3_client_args
 
 
