@@ -1596,9 +1596,11 @@ class SpackSolverSetup:
                     ),
                 )
             )
-            if pkg.needs_commit(declared_version.version):
-                commit = pkg.version_or_package_attr("commit", declared_version.version, "")
-                self.git_commit_versions[pkg.name][declared_version.version] = commit
+
+        for v in self.possible_versions[pkg.name]:
+            if pkg.needs_commit(v):
+                commit = pkg.version_or_package_attr("commit", v, "")
+                self.git_commit_versions[pkg.name][v] = commit
 
         # Declare deprecated versions for this package, if any
         deprecated = self.deprecated_versions[pkg.name]
@@ -2908,10 +2910,11 @@ class SpackSolverSetup:
             for v in versions:
                 if v in self.git_commit_versions[pkg_name]:
                     sha = self.git_commit_versions[pkg_name].get(v)
-                    self.gen.fact(fn.pkg_fact(pkg_name, fn.version_needs_commit(v)))
                     if sha:
                         self.gen.fact(fn.pkg_fact(pkg_name, fn.version_has_commit(v, sha)))
-            self.gen.newline()
+                    else:
+                        self.gen.fact(fn.pkg_fact(pkg_name, fn.version_needs_commit(v)))
+        self.gen.newline()
 
         for pkg_name, versions in sorted(self.version_constraints):
             # generate facts for each package constraint and the version
@@ -3109,8 +3112,18 @@ class SpackSolverSetup:
             commit = spec.variants.get("commit")
             version = spec.versions.concrete_range_as_version
             if not version and commit:
-                version = max(spack.repo.PATH.get_pkg_class(spec.fullname).versions.keys())
-                spec.versions = spack.version.VersionList([version])
+                # look for a matching commit in versions otherwise default to max infinity version
+                versions = spack.repo.PATH.get_pkg_class(spec.fullname).versions
+                match = None
+                for v, data in versions.items():
+                    if data.get("commit") == commit.value[0]:
+                        match = v
+                        break
+                if match:
+                    spec.versions = spack.version.VersionList([match])
+                else:
+                    version = max(versions.keys())
+                    spec.versions = spack.version.VersionList([version])
 
 
         self.gen = ProblemInstanceBuilder()

@@ -1012,7 +1012,7 @@ class PackageBase(WindowsRPath, PackageViewMixin, metaclass=PackageMeta):
 
         ver_attrs = cls.versions.get(version)
         if ver_attrs:
-            return bool(ver_attrs.get("tag") or ver_attrs.get("branch"))
+            return bool(ver_attrs.get("commit") or ver_attrs.get("tag") or ver_attrs.get("branch"))
 
         return False
 
