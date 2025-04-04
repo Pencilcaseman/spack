@@ -3125,7 +3125,6 @@ class SpackSolverSetup:
                     version = max(versions.keys())
                     spec.versions = spack.version.VersionList([version])
 
-
         self.gen = ProblemInstanceBuilder()
         compiler_parser = CompilerParser(configuration=spack.config.CONFIG).with_input_specs(specs)
 
@@ -3202,6 +3201,10 @@ class SpackSolverSetup:
         self.validate_and_define_versions_from_requirements(
             allow_deprecated=allow_deprecated, require_checksum=checksummed
         )
+
+        self.gen.h1("Infinity Versions")
+        for i, v in enumerate(spack.version.infinity_versions):
+            self.gen.fact(fn.infinity_version(v, i))
 
         self.gen.h1("Package Constraints")
         for pkg in sorted(self.pkgs):

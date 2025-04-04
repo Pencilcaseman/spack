@@ -2729,13 +2729,13 @@ class TestConcretize:
         assert s.satisfies("%clang")
         assert s.prefix == "/tmp/prefix2"
 
-    def test_git_based_version_must_exist_to_use_ref(self):
+    def test_phil_git_based_version_must_exist_to_use_ref(self):
         # gmake should fail, only has sha256
         with pytest.raises(spack.error.UnsatisfiableSpecError) as e:
             spack.concretize.concretize_one(f"gmake commit={'a' * 40}")
             assert "Cannot use commit variant with" in e.value.message
 
-    def test_commit_variant_in_absence_of_version_selects_max_infinity_version(self):
+    def test_phil_commit_variant_in_absence_of_version_selects_max_infinity_version(self):
         spec = spack.concretize.concretize_one(f"git-ref-package commit={'a' * 40}")
         assert spec.satisfies("@develop")
 
@@ -3315,7 +3315,7 @@ def test_phil_spec_with_commit_interacts_with_lookup(mock_git_version_info, monk
 
 @pytest.mark.usefixtures("mutable_config", "mock_packages", "do_not_check_runtimes_on_reuse")
 @pytest.mark.parametrize("version_str", [f"git.{'a' * 40}=main", "git.2.1.5=main"])
-def test_relationship_git_versions_and_commit_variant(version_str):
+def test_phil_relationship_git_versions_and_commit_variant(version_str):
     """
     Confirm that GitVersions auto assign and poopulate the commit variant correctly
     """
