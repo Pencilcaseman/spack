@@ -350,5 +350,10 @@ def test_phil_package_condtional_variants_may_depend_on_commit(mock_packages, co
 
 
 def test_phil_commit_variant_finds_matches_for_commit_versions(mock_packages, config):
+    """
+    test conditional dependence on `when='commit=<sha>'`
+    git-ref-commit-dep variant commit-selector depends on a specific commit of git-ref-package
+    that commit is associated with the stable version of git-ref-package
+    """
     spec = spack.concretize.concretize_one(Spec("git-ref-commit-dep+commit-selector"))
     assert spec.satisfies("^git-ref-package@stable")
