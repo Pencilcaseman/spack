@@ -3107,24 +3107,6 @@ class SpackSolverSetup:
             if node.namespace is not None:
                 self.explicitly_required_namespaces[node.name] = node.namespace
 
-        # abstract specs with commit variants are assigend version most likely to have commit sha
-        for spec in specs:
-            commit = spec.variants.get("commit")
-            version = spec.versions.concrete_range_as_version
-            if not version and commit:
-                # look for a matching commit in versions otherwise default to max infinity version
-                versions = spack.repo.PATH.get_pkg_class(spec.fullname).versions
-                match = None
-                for v, data in versions.items():
-                    if data.get("commit") == commit.value[0]:
-                        match = v
-                        break
-                if match:
-                    spec.versions = spack.version.VersionList([match])
-                else:
-                    version = max(versions.keys())
-                    spec.versions = spack.version.VersionList([version])
-
         self.gen = ProblemInstanceBuilder()
         compiler_parser = CompilerParser(configuration=spack.config.CONFIG).with_input_specs(specs)
 
@@ -4229,7 +4211,7 @@ class SpecBuilder:
 
 def _specs_with_commits(spec):
     if not spec.package.needs_commit(spec.version):
-        return 
+        return
 
     # check integrity of specified commit shas
     if "commit" in spec.variants:
@@ -4334,42 +4316,6 @@ def _ensure_external_path_if_external(spec: spack.spec.Spec) -> None:
     spec.external_path = getattr(package, "external_prefix", None) or md.path_from_modules(
         spec.external_modules
     )
-
-
-def _specs_with_commits(spec):
-    has_commit_var = "commit" in spec.variants
-    has_git_version = isinstance(spec.version, vn.GitVersion)
-
-    if not (has_commit_var or has_git_version):
-        return
-
-    # Specs with commit variants
-    # - variant value satsifies commit regex
-    # - paired to a GitVersion or version that is associated with a branch/tag
-    # - variant value should match GitVersion's commit value
-    if has_commit_var:
-        invalid_commit_msg = (
-            f"Internal Error: {spec.name}'s assigned commit {spec.variants['commit'].value}"
-            " does not meet commit syntax requirements."
-        )
-
-        # TODO probably want a more specific function just for sha validation
-        assert vn.is_git_version(spec.variants["commit"].value), invalid_commit_msg
-
-    # Specs with GitVersions
-    # - must have a commit variant, or add it here
-    # - must have a commit on the GitVersion (enforce after look up implemented)
-    if has_git_version:
-        if not spec.version.commit_sha:
-            # TODO(psakiev) this will be a failure when commit look up is automated
-            return
-
-        spec.variants["commit"] = vt.SingleValuedVariant("commit", spec.version.commit_sha)
-    else:
-        # if we are not a GitVersion then only versions with a branch or tag should be
-        # allowed to have the commit variant
-        version_dict = spec.package_class.versions.get(spec.version, {})
-        assert version_dict.get("branch") or version_dict.get("tag")
 
 
 def _develop_specs_from_env(spec, env):

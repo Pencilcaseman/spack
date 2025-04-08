@@ -348,6 +348,7 @@ def test_phil_package_condtional_variants_may_depend_on_commit(mock_packages, co
     assert conditional_variant
     assert conditional_variant.value
 
+
 """
 Issues:
 - version has commit Version("foo", commit=<sha>)

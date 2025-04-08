@@ -3299,13 +3299,15 @@ def test_phil_spec_containing_commit_variant(spec_str, error_type):
         ("git-test-commit@{sha} commit=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", None),
     ],
 )
-def test_phil_spec_with_commit_interacts_with_lookup(mock_git_version_info, monkeypatch, spec_str, error_type):
+def test_phil_spec_with_commit_interacts_with_lookup(
+    mock_git_version_info, monkeypatch, spec_str, error_type
+):
     # This test will be short lived. Technically we could do further checks with a Lookup
     # but skipping impl since we are going to deprecate
     repo_path, filename, commits = mock_git_version_info
     file_url = pathlib.Path(repo_path).as_uri()
     monkeypatch.setattr(spack.package_base.PackageBase, "git", file_url, raising=False)
-    spec = spack.spec.Spec(spec_str.format(sha = commits[-1]))
+    spec = spack.spec.Spec(spec_str.format(sha=commits[-1]))
     if error_type is None:
         spack.concretize.concretize_one(spec)
     else:
@@ -3377,33 +3379,3 @@ def test_concretization_cache_roundtrip(use_concretization_cache, monkeypatch, m
     # object
     for _ in range(5):
         assert h == spack.concretize.concretize_one("hdf5")
-
-
-@pytest.mark.usefixtures("mutable_config", "mock_packages", "do_not_check_runtimes_on_reuse")
-@pytest.mark.parametrize(
-    "spec_str, should_pass, error_type",
-    [
-        # TODO write actual Exceptions for these to give good error messages
-        (f"git-ref-package@main commit={'a' * 40}", True, None),
-        (f"git-ref-package@main commit={'a' * 39}", False, AssertionError),
-        (f"git-ref-package@2.1.6 commit={'a' * 40}", False, AssertionError),
-        (f"git-ref-package@git.2.1.6=2.1.6 commit={'a' * 40}", True, None),
-    ],
-)
-def test_spec_containing_commit_variant(spec_str, should_pass, error_type):
-    spec = spack.spec.Spec(spec_str)
-    if should_pass:
-        spec.concretize()
-    else:
-        with pytest.raises(error_type):
-            spec.concretize()
-
-
-@pytest.mark.usefixtures("mutable_config", "mock_packages", "do_not_check_runtimes_on_reuse")
-@pytest.mark.parametrize("version_str", [f"git.{'a' * 40}=main", "git.2.1.5=main"])
-def test_relationship_git_versions_and_commit_variant(version_str):
-    spec = spack.spec.Spec(f"git-ref-package@{version_str}").concretized()
-    if spec.version.commit_sha:
-        assert spec.version.commit_sha == spec.variants["commit"].value
-    else:
-        assert "commit" not in spec.variants

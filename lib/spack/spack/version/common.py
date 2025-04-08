@@ -28,11 +28,7 @@ def is_git_commit_sha(string: str) -> bool:
 
 
 def is_git_version(string: str) -> bool:
-    return (
-        string.startswith("git.")
-        or is_git_commit_sha(string)
-        or "=" in string[1:]
-    )
+    return string.startswith("git.") or is_git_commit_sha(string) or "=" in string[1:]
 
 
 class VersionError(spack.error.SpackError):
