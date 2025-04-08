@@ -12,6 +12,7 @@ import sys
 from shutil import copy
 from typing import Dict, List, Optional
 
+import llnl.util.filesystem as fs
 from llnl.util.lang import dedupe
 
 from spack.build_environment import dso_suffix, stat_suffix
@@ -49,6 +50,9 @@ def find_python_in_prefix(spec: "spack.spec.Spec", prefix: Optional[str] = None)
         Executable: the Python command
 
     """
+    if not spec.name == "python":
+        raise ValueError("find_python_in_prefix() only works on Python installations.")
+
     prefix = Prefix(prefix or spec.prefix)
 
     # We need to be careful here. If the user is using an externally
@@ -67,7 +71,7 @@ def find_python_in_prefix(spec: "spack.spec.Spec", prefix: Optional[str] = None)
     patterns = [f"python{ver}{file_extension}" for ver in suffixes]
     root = prefix.bin if sys.platform != "win32" else prefix
 
-    path = find_first(root, files=patterns)
+    path = fs.find_first(root, files=patterns)
     if path is not None:
         return Executable(path)
 
