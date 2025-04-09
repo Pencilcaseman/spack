@@ -2735,7 +2735,7 @@ class TestConcretize:
             spack.concretize.concretize_one(f"gmake commit={'a' * 40}")
             assert "Cannot use commit variant with" in e.value.message
 
-    @pytest.mark.disable("not supporting on this branch")
+    @pytest.mark.skip("not supporting on this branch")
     def test_phil_commit_variant_in_absence_of_version_selects_max_infinity_version(self):
         spec = spack.concretize.concretize_one(f"git-ref-package commit={'a' * 40}")
         assert spec.satisfies("@develop")
