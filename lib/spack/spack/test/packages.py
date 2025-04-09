@@ -349,16 +349,7 @@ def test_phil_package_condtional_variants_may_depend_on_commit(mock_packages, co
     assert conditional_variant.value
 
 
-"""
-Issues:
-- version has commit Version("foo", commit=<sha>)
-- version needs commit Version("master", branch=<branch>)
-- cli default
-- contraints/overridding current selection
-- constraints/changing current selection
-"""
-
-
+@pytest.mark.disable("not supporting on this branch")
 def test_phil_commit_variant_finds_matches_for_commit_versions(mock_packages, config):
     """
     test conditional dependence on `when='commit=<sha>'`
