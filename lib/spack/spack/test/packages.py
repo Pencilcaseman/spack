@@ -349,7 +349,7 @@ def test_phil_package_condtional_variants_may_depend_on_commit(mock_packages, co
     assert conditional_variant.value
 
 
-@pytest.mark.disable("not supporting on this branch")
+@pytest.mark.skip("not supporting on this branch")
 def test_phil_commit_variant_finds_matches_for_commit_versions(mock_packages, config):
     """
     test conditional dependence on `when='commit=<sha>'`
