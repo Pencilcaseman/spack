@@ -166,16 +166,16 @@ class CodeSaturne(AutotoolsPackage):
     # Depends on python and PyQt5, but it's easier to use
     # a global install of these
     # depends_on("python")
-    # depends_on("py-pyqt5", when="+gui)
+    depends_on("py-pyqt5", when="+gui", type=(BUILD, RUN))
 
     # depends_on("python")
     # depends_on("py-pyqt5", when="+gui")
 
-    depends_on("cuda", when="+cuda", type=(BUILD,))
-    depends_on("hdf5", when="+hdf5", type=(BUILD,))
-    depends_on("mpi", when="+mpi", type=(BUILD,))
-    depends_on("blas", when="+blas", type=(BUILD,))
-    depends_on("zlib", when="+zlib", type=(BUILD,))
+    depends_on("cuda", when="+cuda", type=BUILD)
+    depends_on("hdf5", when="+hdf5", type=BUILD)
+    depends_on("mpi", when="+mpi", type=BUILD)
+    depends_on("blas", when="+blas", type=BUILD)
+    depends_on("zlib", when="+zlib", type=BUILD)
 
     with when("+medcoupling-as-plugin"):
         depends_on("med", type=(BUILD, RUN))
