@@ -66,25 +66,19 @@ class CodeSaturne(AutotoolsPackage):
     depends_on("m4", type=BUILD)
 
     variant("cuda", default=False, description="CUDA offload")
-    variant("cuda-cpp", default=False,
-            description="CUDA offload for .cpp files")
+    variant("cuda-cpp", default=False, description="CUDA offload for .cpp files")
     variant("hdf5", default=False, description="HDF5 support")
-    variant("debug", default=False,
-            description="Debugging (reduces optimization)")
+    variant("debug", default=False, description="Debugging (reduces optimization)")
     variant("profile", default=False, description="Profiling")
-    variant("auto-flags", default=True,
-            description="Define *FLAGS on known systems")
-    variant("relocatable", default=False,
-            description="Relocatable installation")
+    variant("auto-flags", default=True, description="Define *FLAGS on known systems")
+    variant("relocatable", default=False, description="Relocatable installation")
     variant("shared", default=True, description="Build shared libraries")
     variant("long-gnum", default=False, description="Use long global numbers")
     variant("long-lnum", default=False, description="Use long local numbers")
     variant("sycl", default=False, description="SYCL support")
     variant("openmp", default=True, description="OpenMP support")
-    variant("openmp-target", default=False,
-            description="OpenMP accelerator support")
-    variant("dlloader", default=True,
-            description="Dynamic shared library loading")
+    variant("openmp-target", default=False, description="OpenMP accelerator support")
+    variant("dlloader", default=True, description="Dynamic shared library loading")
     variant(
         "dlopen-rtld-global",
         default=False,
@@ -100,10 +94,8 @@ class CodeSaturne(AutotoolsPackage):
     variant(
         "medcoupling-as-plugin", default=False, description="Use MEDCoupling as plugin"
     )
-    variant("catalyst-as-plugin", default=True,
-            description="Use Catalyst as plugin")
-    variant("melissa-as-plugin", default=True,
-            description="Use Melissa as plugin")
+    variant("catalyst-as-plugin", default=True, description="Use Catalyst as plugin")
+    variant("melissa-as-plugin", default=True, description="Use Melissa as plugin")
     variant("dot", default=False, description="Graphviz dot for diagrams in HTML")
     variant("zlib", default=False, description="Gzipped file support")
     variant("mathjax", default=False, description="MathJax for math in HTML")
@@ -166,19 +158,13 @@ class CodeSaturne(AutotoolsPackage):
         msg="Only one mesh partitioning library can be specified",
     )
 
-    # with when("+..."):
-    #     depends_on("...")
-    #
-    # depends_on("...", when="+...")
+    depends_on("py-setuptools", type=(BUILD, RUN))
+    depends_on("py-numpy", type=(BUILD, RUN))
+    depends_on("py-matplotlib+animation+fonts+latex+movies+image", type=(BUILD, RUN))
+    depends_on("vtk+ffmpeg+xdmf+python", type=(BUILD, RUN))
 
-    # Depends on python and PyQt5, but it's easier to use
-    # a global install of these
-    # depends_on("python")
     depends_on("py-pyqt5", when="+gui", type=(BUILD, RUN))
-    depends_on("py-setuptools", when="+gui", type=(BUILD, RUN))
-
-    # depends_on("python")
-    # depends_on("py-pyqt5", when="+gui")
+    depends_on("vtk+qt", when="+gui", type=(BUILD, RUN))
 
     depends_on("cuda", when="+cuda", type=BUILD)
     depends_on("hdf5", when="+hdf5", type=BUILD)
@@ -202,8 +188,7 @@ class CodeSaturne(AutotoolsPackage):
 
     @run_before("autoreconf")
     def bootstrap(self):
-        bootstrap_path = os.path.join(
-            self.stage.source_path, "sbin", "bootstrap")
+        bootstrap_path = os.path.join(self.stage.source_path, "sbin", "bootstrap")
         which(bootstrap_path)()
 
     def autoreconf(self, spec, prefix):
@@ -293,7 +278,6 @@ class CodeSaturne(AutotoolsPackage):
                 args.append(f"--with-{extra}={self.spec[extra].prefix}")
 
         if self.spec.variants["medcoupling-as-plugin"].value:
-            args.append(
-                f"--with-medcoupling={self.spec['salome-medcoupling'].prefix}")
+            args.append(f"--with-medcoupling={self.spec['salome-medcoupling'].prefix}")
 
         return args
