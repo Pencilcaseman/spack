@@ -64,6 +64,8 @@ class Mesa(MesonPackage):
     # Upperbound on 3.11 because distutils is used for checking py-mako
     depends_on("python@3:3.11", type="build")
     depends_on("py-mako@0.8.0:", type="build")
+    depends_on("py-pyyaml", type="build")
+    depends_on("libxshmfence", type="build")
     depends_on("unwind")
     depends_on("expat")
     depends_on("zlib-api")
@@ -196,24 +198,29 @@ class MesonBuilder(spack.build_systems.meson.MesonBuilder):
         args = [
             "-Dvulkan-drivers=",
             "-Dgallium-vdpau=disabled",
-            "-Dgallium-omx=disabled",
+            # "-Dgallium-omx=disabled",
             "-Dgallium-va=disabled",
-            "-Dgallium-xa=disabled",
-            "-Dgallium-nine=false",
-            "-Dgallium-opencl=disabled",
+            # "-Dgallium-xa=disabled",
+            # "-Dgallium-nine=false",
+            # "-Dgallium-opencl=disabled",
             "-Dbuild-tests=false",
-            "-Dglvnd=false",
+            # "-Dglvnd=false",
         ]
         # gallium-xvmc was removed in @main and @2.23:
         if self.spec.satisfies("@:22.2"):
             args.append("-Dgallium-xvmc=disabled")
 
         args_platforms = []
-        args_gallium_drivers = ["swrast"]
+        # args_gallium_drivers = ["swrast"]
+        args_gallium_drivers = ["llvmpipe"]
         args_dri_drivers = []
 
-        opt_enable = lambda c, o: "-D%s=%sabled" % (o, "en" if c else "dis")
-        opt_bool = lambda c, o: "-D%s=%s" % (o, str(c).lower())
+        def opt_enable(c, o):
+            return "-D%s=%sabled" % (o, "en" if c else "dis")
+
+        def opt_bool(c, o):
+            return "-D%s=%s" % (o, str(c).lower())
+
         if spec.target.family == "arm" or spec.target.family == "aarch64":
             args.append("-Dlibunwind=disabled")
 
@@ -245,16 +252,18 @@ class MesonBuilder(spack.build_systems.meson.MesonBuilder):
 
         if "+egl" in spec:
             num_frontends += 1
-            args.extend(["-Degl=enabled", "-Dgbm=enabled", "-Ddri3=enabled"])
+            # args.extend(["-Degl=enabled", "-Dgbm=enabled", "-Ddri3=enabled"])
+            args.extend(["-Degl=enabled", "-Dgbm=enabled"])
             args_platforms.append("surfaceless")
         else:
-            args.extend(["-Degl=disabled", "-Dgbm=disabled", "-Ddri3=disabled"])
+            # args.extend(["-Degl=disabled", "-Dgbm=disabled", "-Ddri3=disabled"])
+            args.extend(["-Degl=disabled", "-Dgbm=disabled"])
 
         args.append(opt_bool("+opengl" in spec, "opengl"))
         args.append(opt_enable("+opengles" in spec, "gles1"))
         args.append(opt_enable("+opengles" in spec, "gles2"))
 
-        args.append(opt_enable(num_frontends > 1, "shared-glapi"))
+        # args.append(opt_enable(num_frontends > 1, "shared-glapi"))
 
         if "+llvm" in spec:
             llvm_config = Executable(spec["libllvm"].prefix.bin.join("llvm-config"))

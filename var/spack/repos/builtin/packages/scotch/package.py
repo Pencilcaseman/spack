@@ -123,7 +123,6 @@ class Scotch(CMakePackage, MakefilePackage):
 
 
 class CMakeBuilder(spack.build_systems.cmake.CMakeBuilder):
-
     def cmake_args(self):
         args = [
             self.define_from_variant("BUILD_LIBSCOTCHMETIS", "metis"),
