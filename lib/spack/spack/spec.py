@@ -74,7 +74,7 @@ from typing import (
     overload,
 )
 
-from typing_extensions import Literal
+from _vendoring.typing_extensions import Literal
 
 import archspec.cpu
 
@@ -837,7 +837,7 @@ def _shared_subset_pair_iterate(container1, container2):
                 b_idx += 1
 
 
-class FlagMap(lang.HashableMap):
+class FlagMap(lang.HashableMap[str, List[CompilerFlag]]):
     __slots__ = ("spec",)
 
     def __init__(self, spec):
@@ -1429,7 +1429,7 @@ class SpecAnnotations:
     def __repr__(self) -> str:
         result = f"SpecAnnotations().with_spec_format({self.original_spec_format})"
         if self.compiler_node_attribute:
-            result += f"with_compiler({str(self.compiler_node_attribute)})"
+            result += f".with_compiler({str(self.compiler_node_attribute)})"
         return result
 
 
@@ -1861,9 +1861,7 @@ class Spec:
     @property
     def fullname(self):
         return (
-            ("%s.%s" % (self.namespace, self.name))
-            if self.namespace
-            else (self.name if self.name else "")
+            f"{self.namespace}.{self.name}" if self.namespace else (self.name if self.name else "")
         )
 
     @property
@@ -2235,15 +2233,21 @@ class Spec:
             spec._dup(self._lookup_hash())
             return spec
 
-        # Get dependencies that need to be replaced
-        for node in self.traverse(root=False):
-            if node.abstract_hash:
-                spec._add_dependency(node._lookup_hash(), depflag=0, virtuals=())
+        # Map the dependencies that need to be replaced
+        node_lookup = {
+            id(node): node._lookup_hash()
+            for node in self.traverse(root=False)
+            if node.abstract_hash
+        }
 
-        # reattach nodes that were not otherwise satisfied by new dependencies
-        for node in self.traverse(root=False):
-            if not any(n.satisfies(node) for n in spec.traverse()):
-                spec._add_dependency(node.copy(), depflag=0, virtuals=())
+        # Reconstruct dependencies
+        for edge in self.traverse_edges(root=False):
+            key = edge.parent.name
+            current_node = spec if key == spec.name else spec[key]
+            child_node = node_lookup.get(id(edge.spec), edge.spec.copy())
+            current_node._add_dependency(
+                child_node, depflag=edge.depflag, virtuals=edge.virtuals, direct=edge.direct
+            )
 
         return spec
 
@@ -3394,7 +3398,7 @@ class Spec:
             return True
 
         # If we have no dependencies, we can't satisfy any constraints.
-        if not self._dependencies:
+        if not self._dependencies and self.original_spec_format() >= 5 and not self.external:
             return False
 
         # If we arrived here, the lhs root node satisfies the rhs root node. Now we need to check
@@ -3405,6 +3409,7 @@ class Spec:
         # verify the edge properties, cause everything is encoded in the hash of the nodes that
         # will be verified later.
         lhs_edges: Dict[str, Set[DependencySpec]] = collections.defaultdict(set)
+        mock_nodes_from_old_specfiles = set()
         for rhs_edge in other.traverse_edges(root=False, cover="edges"):
             # If we are checking for ^mpi we need to verify if there is any edge
             if spack.repo.PATH.is_virtual(rhs_edge.spec.name):
@@ -3426,13 +3431,27 @@ class Spec:
                     except KeyError:
                         return False
 
-                candidates = current_node.dependencies(
-                    name=rhs_edge.spec.name,
-                    deptype=rhs_edge.depflag,
-                    virtuals=rhs_edge.virtuals or None,
-                )
-                if not candidates or not any(x.satisfies(rhs_edge.spec) for x in candidates):
-                    return False
+                if current_node.original_spec_format() < 5 or (
+                    current_node.original_spec_format() >= 5 and current_node.external
+                ):
+                    compiler_spec = current_node.annotations.compiler_node_attribute
+                    if compiler_spec is None:
+                        return False
+
+                    mock_nodes_from_old_specfiles.add(compiler_spec)
+                    # This checks that the single node compiler spec satisfies the request
+                    # of a direct dependency. The check is not perfect, but based on heuristic.
+                    if not compiler_spec.satisfies(rhs_edge.spec):
+                        return False
+
+                else:
+                    candidates = current_node.dependencies(
+                        name=rhs_edge.spec.name,
+                        deptype=rhs_edge.depflag,
+                        virtuals=rhs_edge.virtuals or None,
+                    )
+                    if not candidates or not any(x.satisfies(rhs_edge.spec) for x in candidates):
+                        return False
 
                 continue
 
@@ -3472,8 +3491,9 @@ class Spec:
                     return False
 
         # Edges have been checked above already, hence deps=False
+        lhs_nodes = [x for x in self.traverse(root=False)] + sorted(mock_nodes_from_old_specfiles)
         return all(
-            any(lhs.satisfies(rhs, deps=False) for lhs in self.traverse(root=False))
+            any(lhs.satisfies(rhs, deps=False) for lhs in lhs_nodes)
             for rhs in other.traverse(root=False)
         )
 
@@ -3947,6 +3967,8 @@ class Spec:
                     except AttributeError:
                         if part == "compiler":
                             return "none"
+                        elif part == "specfile_version":
+                            return f"v{current.original_spec_format()}"
 
                         raise SpecFormatStringError(
                             f"Attempted to format attribute {attribute}. "
@@ -4472,7 +4494,7 @@ class Spec:
         return bool(self.dependencies(virtuals=(virtual,)))
 
 
-class VariantMap(lang.HashableMap):
+class VariantMap(lang.HashableMap[str, vt.VariantValue]):
     """Map containing variant instances. New values can be added only
     if the key is not already present."""
 
@@ -4654,6 +4676,9 @@ def substitute_abstract_variants(spec: Spec):
     # in $spack/lib/spack/spack/spec_list.py
     unknown = []
     for name, v in spec.variants.items():
+        if v.concrete and v.type == vt.VariantType.MULTI:
+            continue
+
         if name == "dev_path":
             v.type = vt.VariantType.SINGLE
             v.concrete = True
