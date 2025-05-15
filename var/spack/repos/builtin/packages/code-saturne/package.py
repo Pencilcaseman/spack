@@ -174,7 +174,7 @@ class CodeSaturne(AutotoolsPackage):
 
     with when("+medcoupling-as-plugin"):
         depends_on("med", type=(BUILD, RUN))
-        depends_on("salome-configuration", type=(BUILD, RUN))
+        # depends_on("salome-configuration", type=(BUILD, RUN))
         depends_on("salome-med", type=(BUILD, RUN))
         depends_on("salome-medcoupling", type=(BUILD, RUN))
 
@@ -267,7 +267,7 @@ class CodeSaturne(AutotoolsPackage):
             "metis",
             "scotch",
             "cgns",
-            # "med",
+            "med",
             "zlib",
             "melissa",
             "petsc",
