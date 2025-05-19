@@ -145,27 +145,20 @@ class CodeSaturne(AutotoolsPackage):
     )
 
     variant("cuda", default=False, description="CUDA offload")
-    variant("cuda-cpp", default=False,
-            description="CUDA offload for .cpp files")
+    variant("cuda-cpp", default=False, description="CUDA offload for .cpp files")
     variant("hdf5", default=False, description="HDF5 support")
-    variant("debug", default=False,
-            description="Debugging (reduces optimization)")
+    variant("debug", default=False, description="Debugging (reduces optimization)")
     variant("profile", default=False, description="Profiling")
-    variant("auto-flags", default=True,
-            description="Define *FLAGS on known systems")
-    variant("relocatable", default=False,
-            description="Relocatable installation")
+    variant("auto-flags", default=True, description="Define *FLAGS on known systems")
+    variant("relocatable", default=False, description="Relocatable installation")
     variant("shared", default=True, description="Build shared libraries")
     variant("long-gnum", default=False, description="Use long global numbers")
     variant("long-lnum", default=False, description="Use long local numbers")
     variant("sycl", default=False, description="SYCL support")
     variant("openmp", default=True, description="OpenMP support")
-    variant("openmp-target", default=False,
-            description="OpenMP accelerator support")
-    variant("dlloader", default=True,
-            description="Dynamic shared library loading")
-    variant("dlopen-rtld-global", default=False,
-            description="Add RTLD_GLOBAL to dlopen flags")
+    variant("openmp-target", default=False, description="OpenMP accelerator support")
+    variant("dlloader", default=True, description="Dynamic shared library loading")
+    variant("dlopen-rtld-global", default=False, description="Add RTLD_GLOBAL to dlopen flags")
     variant("mpi", default=True, description="MPI support")
     variant("mpi-io", default=True, description="Use MPI I/O when available")
     variant(
@@ -173,12 +166,9 @@ class CodeSaturne(AutotoolsPackage):
         default=False,
         description="Allow CoolProp fluids in GUI even when not available",
     )
-    variant("medcoupling-as-plugin", default=False,
-            description="Use MEDCoupling as plugin")
-    variant("catalyst-as-plugin", default=True,
-            description="Use Catalyst as plugin")
-    variant("melissa-as-plugin", default=True,
-            description="Use Melissa as plugin")
+    variant("med", default=False, description="Enable MED and MEDCoupling")
+    variant("catalyst", default=True, description="Enable Catalyst")
+    variant("melissa", default=True, description="Enable Melissa")
     variant("dot", default=False, description="Graphviz dot for diagrams in HTML")
     variant("zlib", default=False, description="Gzipped file support")
     variant("mathjax", default=False, description="MathJax for math in HTML")
@@ -186,10 +176,8 @@ class CodeSaturne(AutotoolsPackage):
     variant("backend", default=True, description="Back-end elements")
     variant("gui", default=True, description="Graphical User Interface")
     variant("largefile", default=True, description="Support for large files")
-    variant("malloc-hooks", default=False,
-            description="Use malloc hooks when available")
-    variant("sockets", default=True,
-            description="Allow communications through IP sockets")
+    variant("malloc-hooks", default=False, description="Use malloc hooks when available")
+    variant("sockets", default=True, description="Allow communications through IP sockets")
     variant(
         "cgns",
         default=False,
@@ -231,13 +219,11 @@ class CodeSaturne(AutotoolsPackage):
 
     conflicts("+mpi-io", when="~mpi", msg="MPI I/O requires MPI support")
     conflicts("^cgns@:3.1", when="+cgns")
-    conflicts("+scotch", when="+metis",
-              msg="Only one mesh partitioning library can be specified")
+    conflicts("+scotch", when="+metis", msg="Only one mesh partitioning library can be specified")
 
     depends_on("py-setuptools", type=(BUILD, RUN))
     depends_on("py-numpy", type=(BUILD, RUN))
-    depends_on("py-matplotlib+animation+fonts+latex+movies+image",
-               type=(BUILD, RUN))
+    depends_on("py-matplotlib+animation+fonts+latex+movies+image", type=(BUILD, RUN))
     depends_on("vtk+ffmpeg+xdmf+python", type=(BUILD, RUN))
 
     depends_on("py-pyqt5", when="+gui", type=(BUILD, RUN))
@@ -265,8 +251,7 @@ class CodeSaturne(AutotoolsPackage):
 
     @run_before("autoreconf")
     def bootstrap(self):
-        bootstrap_path = os.path.join(
-            self.stage.source_path, "sbin", "bootstrap")
+        bootstrap_path = os.path.join(self.stage.source_path, "sbin", "bootstrap")
         which(bootstrap_path)()
 
     def autoreconf(self, spec, prefix):
@@ -339,24 +324,23 @@ class CodeSaturne(AutotoolsPackage):
 
         for extra in [
             "hdf5",
-            # "salome",
             "blas",
             "mpi",
             "metis",
             "scotch",
             "cgns",
-            # "med",
             "zlib",
             "melissa",
             "petsc",
             "hypre",
             "amgx",
+            "catalyst",
         ]:
             if self.spec.variants.get(extra, default=TrueValue).value:
                 args.append(f"--with-{extra}={self.spec[extra].prefix}")
 
-        if self.spec.variants["medcoupling-as-plugin"].value:
-            args.append(
-                f"--with-medcoupling={self.spec['salome-medcoupling'].prefix}")
+        if self.spec.variants["med"].value:
+            args.append(f"--with-med={self.spec['med'].prefix}")
+            args.append(f"--with-medcoupling={self.spec['salome-medcoupling'].prefix}")
 
         return args
