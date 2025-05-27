@@ -450,7 +450,8 @@ class Openmpi(AutotoolsPackage, CudaPackage):
     # when in non-standard location
     patch("accelerator-cuda-fix-bug-in-makefile.patch", when="@5.0.0")
     patch("btlsmcuda-fix-problem-with-makefile.patch", when="@5.0.0")
-    patch("accelerator-build-components-as-dso-s-by-default.patch", when="@5.0.0:5.0.1")
+    patch("accelerator-build-components-as-dso-s-by-default.patch",
+          when="@5.0.0:5.0.1")
 
     # OpenMPI 5.0.0-5.0.3 needs to change PMIX version check to compile w/ PMIX > 4.2.5
     # https://github.com/open-mpi/ompi/issues/12537#issuecomment-2103350910
@@ -491,16 +492,19 @@ class Openmpi(AutotoolsPackage, CudaPackage):
 
     variant(
         "schedulers",
-        values=disjoint_sets(("auto",), SCHEDULERS).with_non_feature_values("auto", "none"),
+        values=disjoint_sets(
+            ("auto",), SCHEDULERS).with_non_feature_values("auto", "none"),
         description="List of schedulers for which support is enabled; "
         "'auto' lets openmpi determine",
     )
 
     # Additional support options
     variant("atomics", default=True, description="Enable built-in atomics")
-    variant("java", default=False, when="@1.7.4:", description="Build Java support")
+    variant("java", default=False, when="@1.7.4:",
+            description="Build Java support")
     variant("static", default=False, description="Build static libraries")
-    variant("sqlite3", default=False, when="@1.7.3:1", description="Build SQLite3 support")
+    variant("sqlite3", default=False, when="@1.7.3:1",
+            description="Build SQLite3 support")
     variant("vt", default=True, description="Build VampirTrace support")
     variant(
         "thread_multiple",
@@ -517,7 +521,8 @@ class Openmpi(AutotoolsPackage, CudaPackage):
         when="@1.7.4:",
         description="Enable rpath support in the wrappers",
     )
-    variant("cxx", default=False, when="@:4", description="Enable deprecated C++ MPI bindings")
+    variant("cxx", default=False, when="@:4",
+            description="Enable deprecated C++ MPI bindings")
     variant(
         "cxx_exceptions",
         default=False,
@@ -531,9 +536,12 @@ class Openmpi(AutotoolsPackage, CudaPackage):
         when="@:4",
         description="Build deprecated support for the Singularity container",
     )
-    variant("lustre", default=False, description="Lustre filesystem library support")
-    variant("romio", default=True, when="@:5", description="Enable ROMIO support")
-    variant("romio", default=False, when="@5:", description="Enable ROMIO support")
+    variant("lustre", default=False,
+            description="Lustre filesystem library support")
+    variant("romio", default=True, when="@:5",
+            description="Enable ROMIO support")
+    variant("romio", default=False, when="@5:",
+            description="Enable ROMIO support")
     variant(
         "romio-filesystem",
         description="Add the filesystem to romio",
@@ -554,14 +562,16 @@ class Openmpi(AutotoolsPackage, CudaPackage):
         ).with_non_feature_values("none"),
     )
 
-    variant("rsh", default=True, description="Enable rsh (openssh) process lifecycle management")
+    variant("rsh", default=True,
+            description="Enable rsh (openssh) process lifecycle management")
     variant(
         "orterunprefix",
         default=False,
         when="@1.3:4",
         description="Prefix Open MPI to PATH and LD_LIBRARY_PATH on local and remote hosts",
     )
-    variant("ipv6", default=False, when="@4:", description="Enable IPv6 support")
+    variant("ipv6", default=False, when="@4:",
+            description="Enable IPv6 support")
     # Adding support to build a debug version of OpenMPI that activates
     # Memchecker, as described here:
     #
@@ -584,9 +594,12 @@ class Openmpi(AutotoolsPackage, CudaPackage):
     # Variants to use internal packages
     variant("internal-hwloc", default=False, description="Use internal hwloc")
     variant("internal-pmix", default=False, description="Use internal pmix")
-    variant("internal-libevent", default=False, description="Use internal libevent")
-    variant("openshmem", default=False, description="Enable building OpenSHMEM")
-    variant("debug", default=False, description="Make debug build", when="build_system=autotools")
+    variant("internal-libevent", default=False,
+            description="Use internal libevent")
+    variant("openshmem", default=False,
+            description="Enable building OpenSHMEM")
+    variant("debug", default=False, description="Make debug build",
+            when="build_system=autotools")
 
     variant(
         "two_level_namespace",
@@ -682,7 +695,8 @@ with '-Wl,-commons,use_dylibs' and without
 
     depends_on("cuda", type=("build", "link", "run"), when="@5: +cuda")
 
-    conflicts("+cxx_exceptions", when="%nvhpc", msg="nvc does not ignore -fexceptions, but errors")
+    conflicts("+cxx_exceptions", when="%nvhpc",
+              msg="nvc does not ignore -fexceptions, but errors")
 
     # CUDA support was added in 1.7, and since the variant is part of the
     # parent package we must express as a conflict rather than a conditional
@@ -710,7 +724,7 @@ with '-Wl,-commons,use_dylibs' and without
     conflicts(
         "schedulers=loadleveler",
         when="@3:",
-        msg="The loadleveler scheduler is not supported with " "openmpi(>=3).",
+        msg="The loadleveler scheduler is not supported with openmpi(>=3).",
     )
 
     # According to this comment on github:
@@ -787,7 +801,8 @@ with '-Wl,-commons,use_dylibs' and without
 
             # cuda
             match = re.search(
-                r'parameter "mpi_built_with_cuda_support" ' + r'\(current value: "(\S+)"', output
+                r'parameter "mpi_built_with_cuda_support" ' +
+                r'\(current value: "(\S+)"', output
             )
             if match and is_enabled(match.group(1)):
                 variants.append("+cuda")
@@ -844,7 +859,8 @@ with '-Wl,-commons,use_dylibs' and without
             # fabrics
             used_fabrics = []
             for fabric in cls.FABRICS:
-                match = re.search(r"\bMCA (?:mtl|btl|pml): %s\b" % fabric, output)
+                match = re.search(
+                    r"\bMCA (?:mtl|btl|pml): %s\b" % fabric, output)
                 if match:
                     used_fabrics.append(fabric)
             if used_fabrics:
@@ -855,7 +871,8 @@ with '-Wl,-commons,use_dylibs' and without
             # schedulers
             used_schedulers = []
             for scheduler in cls.SCHEDULERS:
-                match = re.search(r"\bMCA (?:prrte|ras): %s\b" % scheduler, output)
+                match = re.search(r"\bMCA (?:prrte|ras): %s\b" %
+                                  scheduler, output)
                 if match:
                     used_schedulers.append(scheduler)
             if used_schedulers:
@@ -1038,14 +1055,16 @@ with '-Wl,-commons,use_dylibs' and without
 
     def configure_args(self):
         spec = self.spec
-        config_args = ["--enable-shared", "--disable-silent-rules", "--disable-sphinx"]
+        config_args = ["--enable-shared",
+                       "--disable-silent-rules", "--disable-sphinx"]
 
         # Work around incompatibility with new apple-clang linker
         # https://github.com/open-mpi/ompi/issues/12427
         if spec.satisfies("@:4.1.6,5.0.0:5.0.3 %apple-clang@15:"):
             config_args.append("--with-wrapper-fcflags=-Wl,-ld_classic")
 
-        config_args.extend(self.enable_or_disable("builtin-atomics", variant="atomics"))
+        config_args.extend(self.enable_or_disable(
+            "builtin-atomics", variant="atomics"))
 
         if spec.satisfies("+pmi"):
             config_args.append("--with-pmi={0}".format(spec["slurm"].prefix))
@@ -1092,7 +1111,8 @@ with '-Wl,-commons,use_dylibs' and without
             config_args.extend(self.with_or_without("schedulers"))
 
         if spec.satisfies("schedulers=lsf"):
-            config_args.append("--with-lsf-libdir={0}".format(spec["lsf"].libs.directories[0]))
+            config_args.append(
+                "--with-lsf-libdir={0}".format(spec["lsf"].libs.directories[0]))
 
         config_args.extend(self.enable_or_disable("memchecker"))
         if spec.satisfies("+memchecker"):
@@ -1101,13 +1121,15 @@ with '-Wl,-commons,use_dylibs' and without
         # Package dependencies
         for dep in ["lustre", "singularity", "valgrind"]:
             if "^" + dep in spec:
-                config_args.append("--with-{0}={1}".format(dep, spec[dep].prefix))
+                config_args.append(
+                    "--with-{0}={1}".format(dep, spec[dep].prefix))
 
         # libevent support
         if spec.satisfies("+internal-libevent"):
             config_args.append("--with-libevent=internal")
         elif "^libevent" in spec:
-            config_args.append("--with-libevent={0}".format(spec["libevent"].prefix))
+            config_args.append(
+                "--with-libevent={0}".format(spec["libevent"].prefix))
 
         # PMIx support
         if spec.satisfies("+internal-pmix"):
@@ -1116,7 +1138,8 @@ with '-Wl,-commons,use_dylibs' and without
             config_args.append("--with-pmix={0}".format(spec["pmix"].prefix))
 
         if "^zlib-api" in spec:
-            config_args.append("--with-zlib={0}".format(spec["zlib-api"].prefix))
+            config_args.append(
+                "--with-zlib={0}".format(spec["zlib-api"].prefix))
 
         # Hwloc support
         if spec.satisfies("+internal-hwloc"):
@@ -1127,7 +1150,8 @@ with '-Wl,-commons,use_dylibs' and without
         # Java support
         if "+java" in spec:
             config_args.extend(
-                ["--enable-java", "--enable-mpi-java", "--with-jdk-dir=" + spec["java"].home]
+                ["--enable-java", "--enable-mpi-java",
+                    "--with-jdk-dir=" + spec["java"].home]
             )
         elif spec.satisfies("@1.7.4:"):
             config_args.extend(["--disable-java", "--disable-mpi-java"])
@@ -1138,7 +1162,8 @@ with '-Wl,-commons,use_dylibs' and without
 
         if not spec.satisfies("romio-filesystem=none"):
             args = "+".join(spec.variants["romio-filesystem"].value)
-            config_args.append(f"--with-io-romio-flags=--with-file-system={args}")
+            config_args.append(
+                f"--with-io-romio-flags=--with-file-system={args}")
 
         if "+gpfs" in spec:
             config_args.append("--with-gpfs")
@@ -1155,7 +1180,8 @@ with '-Wl,-commons,use_dylibs' and without
 
         # Multithreading support
         config_args.extend(
-            self.enable_or_disable("mpi-thread-multiple", variant="thread_multiple")
+            self.enable_or_disable("mpi-thread-multiple",
+                                   variant="thread_multiple")
         )
 
         # CUDA support
@@ -1168,12 +1194,14 @@ with '-Wl,-commons,use_dylibs' and without
             if spec.satisfies("@1.7:1.7.2"):
                 # This option was removed from later versions
                 config_args.append(
-                    "--with-cuda-libdir={0}".format(spec["cuda"].libs.directories[0])
+                    "--with-cuda-libdir={0}".format(
+                        spec["cuda"].libs.directories[0])
                 )
             if spec.satisfies("@5.0:"):
                 # And then it returned
                 config_args.append(
-                    "--with-cuda-libdir={0}".format(spec["cuda"].libs.directories[0] + "/stubs")
+                    "--with-cuda-libdir={0}".format(
+                        spec["cuda"].libs.directories[0] + "/stubs")
                 )
             if spec.satisfies("@1.7.2"):
                 # There was a bug in 1.7.2 when --enable-static is used
@@ -1202,7 +1230,8 @@ with '-Wl,-commons,use_dylibs' and without
             config_args.append("--disable-wrapper-runpath")
 
         config_args.extend(self.enable_or_disable("mpi-cxx", variant="cxx"))
-        config_args.extend(self.enable_or_disable("cxx-exceptions", variant="cxx_exceptions"))
+        config_args.extend(self.enable_or_disable(
+            "cxx-exceptions", variant="cxx_exceptions"))
 
         #
         # the Spack path padding feature causes issues with Open MPI's lex based parsing system
@@ -1259,7 +1288,8 @@ with '-Wl,-commons,use_dylibs' and without
                 self.prefix.bin.shmemrun,
                 self.prefix.bin.oshrun,
             ]
-            script_stub = join_path(os.path.dirname(__file__), "nolegacylaunchers.sh")
+            script_stub = join_path(os.path.dirname(
+                __file__), "nolegacylaunchers.sh")
             for exe in exe_list:
                 try:
                     os.remove(exe)
@@ -1289,11 +1319,13 @@ with '-Wl,-commons,use_dylibs' and without
     def test_mpirun(self):
         """test installed mpirun"""
         options = ["-n", "1", "ls", ".."]
-        self.run_installed_binary("mpirun", options, [f"openmpi-{self.spec.version}"])
+        self.run_installed_binary(
+            "mpirun", options, [f"openmpi-{self.spec.version}"])
 
     def test_opmpi_info(self):
         """test installed ompi_info"""
-        self.run_installed_binary("ompi_info", [], [f"Ident string: {self.spec.version}", "MCA"])
+        self.run_installed_binary(
+            "ompi_info", [], [f"Ident string: {self.spec.version}", "MCA"])
 
     def test_version(self):
         """check versions of installed software"""
@@ -1372,7 +1404,8 @@ with '-Wl,-commons,use_dylibs' and without
 
 
 def get_spack_compiler_spec(compiler):
-    spack_compilers = spack.compilers.config.find_compilers([os.path.dirname(compiler)])
+    spack_compilers = spack.compilers.config.find_compilers(
+        [os.path.dirname(compiler)])
     actual_compiler = None
     # check if the compiler actually matches the one we want
     for spack_compiler in spack_compilers:

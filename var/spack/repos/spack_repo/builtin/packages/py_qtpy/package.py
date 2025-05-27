@@ -25,6 +25,8 @@ class PyQtpy(PythonPackage):
 
     depends_on("python@2.7:2.8,3.6:", when="@1.10.0:", type=("build", "run"))
     depends_on("py-setuptools", type="build")
+    depends_on("qt", type=("build", "run"))
+
     for api in apis:
         depends_on("py-" + api, when="api=" + api, type="run")
 

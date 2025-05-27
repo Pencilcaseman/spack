@@ -396,6 +396,9 @@ class Hypre(AutotoolsPackage, CudaPackage, ROCmPackage):
 
     @run_after("install")
     def cache_test_sources(self):
+        if not self.run_tests:
+            return
+
         cache_extra_test_sources(self, self.extra_install_tests)
 
         # Customize the makefile to use the installed package

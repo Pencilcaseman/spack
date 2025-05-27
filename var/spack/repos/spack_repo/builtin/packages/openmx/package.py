@@ -4,7 +4,6 @@
 
 
 from spack_repo.builtin.build_systems.makefile import MakefilePackage
-
 from spack.package import *
 
 
@@ -16,8 +15,10 @@ class Openmx(MakefilePackage):
     """
 
     homepage = "http://www.openmx-square.org/index.html"
+    git = "https://github.com/OpenMx/OpenMx.git"
     url = "https://t-ozaki.issp.u-tokyo.ac.jp/openmx3.8.tar.gz"
 
+    version("master", branch="master")
     version("3.9", sha256="27bb56bd4d1582d33ad32108fb239b546bdd1bdffd6f5b739b4423da1ab93ae2")
     version("3.8", sha256="36ee10d8b1587b25a2ca1d57f110111be65c4fb4dc820e6d93e1ed2b562634a1")
 
@@ -45,6 +46,18 @@ class Openmx(MakefilePackage):
     depends_on("scalapack")
     depends_on("sse2neon", when="target=aarch64:")
 
+    depends_on("r", type=("build", "run"))
+    depends_on("r-digest", type=("build", "run"))
+    depends_on("r-mass", type=("build", "run"))
+    depends_on("r-matrix", type=("build", "run"))
+    depends_on("r-rcpp", type=("build", "run"))
+    depends_on("r-rcppparallel", type=("build", "run"))
+    depends_on("r-lifecycle", type=("build", "run"))
+    depends_on("r-rcppeigen", type=("build", "run"))
+    depends_on("r-stanheaders", type=("build", "run"))
+    depends_on("r-bh", type=("build", "run"))
+    # depends_on("r-rpf", type=("build", "run"))
+
     patch("for_aarch64.patch", when="@3.8 target=aarch64:")
 
     parallel = False
@@ -52,6 +65,9 @@ class Openmx(MakefilePackage):
     build_directory = "source"
 
     def edit(self, spec, prefix):
+        if not os.path.exists("patch"):
+            return
+
         # Move contents to source/
         # http://www.openmx-square.org/bugfixed/18June12/README.txt
         copy_tree("patch", "source")
@@ -100,8 +116,10 @@ class Openmx(MakefilePackage):
 
     @property
     def build_targets(self):
-        return ["all"] + self.common_arguments
+        # return ["all"] + self.common_arguments
+        return ["install"]
 
     @property
     def install_targets(self):
-        return ["all"] + self.common_arguments
+        # return ["all"] + self.common_arguments
+        return []
