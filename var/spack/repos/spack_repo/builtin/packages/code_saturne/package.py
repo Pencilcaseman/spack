@@ -7,6 +7,8 @@ import os
 import llnl.util.filesystem as fs
 from spack.package import *
 
+from spack_repo.builtin.build_systems.autotools import AutotoolsPackage
+
 
 BUILD = "build"
 RUN = "run"
@@ -235,7 +237,10 @@ class CodeSaturne(AutotoolsPackage):
     depends_on("blas", when="+blas", type=BUILD)
     depends_on("zlib", when="+zlib", type=BUILD)
 
-    with when("+medcoupling-as-plugin"):
+    with when("+catalyst"):
+        depends_on("libcatalyst")
+
+    with when("+med"):
         depends_on("med", type=(BUILD, RUN))
         depends_on("salome-configuration", type=(BUILD, RUN))
         depends_on("salome-med", type=(BUILD, RUN))
@@ -303,8 +308,6 @@ class CodeSaturne(AutotoolsPackage):
             "dlopen-rtld-global",
             "mpi-io",
             "gui-coolprop",
-            "medcoupling-as-plugin",
-            "melissa-as-plugin",
             "dot",
             "mathjax",
             "frontend",
@@ -334,13 +337,23 @@ class CodeSaturne(AutotoolsPackage):
             "petsc",
             "hypre",
             "amgx",
-            "catalyst",
         ]:
             if self.spec.variants.get(extra, default=TrueValue).value:
                 args.append(f"--with-{extra}={self.spec[extra].prefix}")
 
+        if self.spec.variants["catalyst"].value:
+            args.append(f"--with-catalyst={self.spec['libcatalyst'].prefix}")
+
+        if self.spec.variants["melissa"].value:
+            args.append("--enable-melissa-as-plugin")
+        else:
+            args.append("--disable-melissa-as-plugin")
+
         if self.spec.variants["med"].value:
+            args.append("--enable-medcoupling-as-plugin")
             args.append(f"--with-med={self.spec['med'].prefix}")
             args.append(f"--with-medcoupling={self.spec['salome-medcoupling'].prefix}")
+        else:
+            args.append("--disable-medcoupling-as-plugin")
 
         return args
